@@ -72,11 +72,13 @@ a=DelayOutMod(idx*4+0,t1,rate/srate*2*$pi,depth*20);
 b=DelayOut(idx*4+1,t2);
 c=DelayOut(idx*4+2,t3);
 d=DelayOut(idx*4+3,t4);
+// /2 no idea here! Density blows up the matrix 
+// So this is def wrong!
 DelayIn(idx*4+0,in+((a+b+c+d)/2*density),t1);
 DelayIn(idx*4+1,in+((a-b+c-d)/2*density),t2);
 DelayIn(idx*4+2,in+((a+b-c-d)/2*density),t3);
 DelayIn(idx*4+3,in+((a-b-c+d)/2*density),t4);
-(a+b+c+d)*0.4;
+(a+b+c+d)*0.4; // no idea what this value should be!
 );
 
 
