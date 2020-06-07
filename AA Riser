@@ -1,0 +1,113 @@
+desc:Verb Riser
+
+// (C) 2020 S.D.Smith - All rights reserved
+// strictly non commercial use
+// A Super simple FDN reverb 
+// using a Hadamad 4 x 4 Matrix
+// Setup in serial for super slow attack!
+// Based on the FANTASTIC SuperMassive - Valhalla DSP
+
+slider1:0.5<0.0001,1>Time
+
+slider3:0.5<0.0001,1>Density
+slider4:0.5<0.0001,1>Warp
+
+slider6:0.5<0.0001,10>Rate
+slider7:0.5<0,1>Depth
+
+slider9:0.03<0,0.1>Width
+slider11:0.5<0.0001,1>Level
+@init
+
+Params=0;
+ModParams=500;
+
+
+function DelayOut(idx,t)
+(
+Delay=1000+idx*srate;
+DP=Params[idx];;
+Delay[DP];
+);
+
+function DelayOutMod(idx,t,speed,depth)
+(
+Delay=1000+idx*srate;
+DP=Params[idx];
+MP=ModParams[idx];
+Mod=(sin(MP)+1)*depth;
+MP+=speed;
+ModParams[idx]=MP;
+DP+=Mod;
+DP>t? DP-=t;
+//DP<0? DP+=t;
+Delay[DP];
+);
+
+function DelayIn(idx,in,t)
+(
+Delay=1000+idx*srate;
+DP=Params[idx];;
+out=Delay[DP];
+Delay[DP]=in;
+DP+=1;
+DP>t? DP=0;
+Params[idx]=DP;
+out;
+);
+
+function Hadamad4x4(idx,in,t,warp)
+(
+td=1;
+t1=t*td;
+td*=warp;
+t2=t*td;
+td*=warp;
+t3=t*td;
+td*=warp;
+t4=t*td;
+td*=warp;
+
+a=DelayOutMod(idx*4+0,t1,rate/srate*2*$pi,depth*20);
+b=DelayOut(idx*4+1,t2);
+c=DelayOut(idx*4+2,t3);
+d=DelayOut(idx*4+3,t4);
+DelayIn(idx*4+0,in+((a+b+c+d)/2*density),t1);
+DelayIn(idx*4+1,in+((a-b+c-d)/2*density),t2);
+DelayIn(idx*4+2,in+((a+b-c-d)/2*density),t3);
+DelayIn(idx*4+3,in+((a-b-c+d)/2*density),t4);
+(a+b+c+d)*0.4;
+);
+
+
+@slider
+rtime=slider1*srate;
+feedback=slider2;
+density=slider3;
+warp=slider4;
+rate=slider6;
+depth=slider7;
+width=1-slider9;
+level=slider11;
+
+
+@sample
+
+wl=warp;
+
+outl=spl0;
+outr=spl1;
+
+l=0;
+
+while (l<8)
+  (
+  outl=Hadamad4x4(l,outl,rtime,wl);
+  outr=Hadamad4x4((l+32),outr,rtime,wl*width); 
+  l+=1;
+  wl*=0.98;
+  );
+  
+spl0=outl*level;
+spl1=outr*level;
+
