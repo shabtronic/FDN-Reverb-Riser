@@ -1,0 +1,356 @@
+desc:FDN Verb Riser
+
+// (C) 2020 S.D.Smith - All rights reserved
+// strictly non commercial use
+// A Super simple FDN reverb 
+// using a Hadamad 4 x 4 Matrix
+// Setup in serial for super slow attack!
+// Based on the FANTASTIC SuperMassive - Valhalla DSP
+
+slider1:0.5<0.0001,0.5>Time
+
+slider3:0.5<0.0001,1>Density
+slider4:0.5<0.0001,1>Warp
+
+slider6:2.4<0.0001,10>Rate
+slider7:1<0,1>Depth
+
+slider9:0.03<0,0.1>Stereo Width
+slider11:1<1,8,1>Serial Count
+
+slider13:0<0,5,1{House4x4,House8x8,House12x12,Hada4x4,Hada8x8}>Algo Topography
+slider20:0.5<0.0001,1>Level
+
+@init
+
+Params=0;
+ModParams=500;
+
+
+function DelayOut(idx,t)
+(
+Delay=1000+(idx*bigtime);
+DP=Params[idx];;
+Delay[DP];
+);
+
+function DelayOutMod(idx,t,speed,depth)
+(
+Delay=1000+(idx*bigtime);
+DP=Params[idx];
+MP=ModParams[idx];
+Mod=(sin(MP+idx/4)+1.1)*depth;
+MP+=speed;
+ModParams[idx]=MP;
+DP+=Mod;
+DP>t? DP-=t;
+Delay[DP];
+);
+
+function DelayIn(idx,in,t)
+(
+Delay=1000+(idx*bigtime);
+DP=Params[idx];;
+out=Delay[DP];
+Delay[DP]=in;
+DP+=1;
+DP>t? DP=0;
+Params[idx]=DP;
+out;
+);
+
+function Hadamad4x4(idx,in,t,warp)
+(
+td=1;
+t1=t*td;
+td*=warp;
+t2=t*td;
+td*=warp;
+t3=t*td;
+td*=warp;
+t4=t*td;
+td*=warp;
+// Only mod the First delay line
+// Since we're doing serial
+// one mod per FDN should be fine!
+div=1/sqrt(4);
+a=DelayOutMod(idx*4+0,t1,rate/srate*2*$pi,depth*srate/1000);
+b=DelayOut(idx*4+1,t2);
+c=DelayOut(idx*4+2,t3);
+d=DelayOut(idx*4+3,t4);
+// /2 no idea here! Density blows up the matrix 
+// So this is def wrong!
+DelayIn(idx*4+0,in+((a+b+c+d)*div*density),t1);
+DelayIn(idx*4+1,in+((a-b+c-d)*div*density),t2);
+DelayIn(idx*4+2,in+((a+b-c-d)*div*density),t3);
+DelayIn(idx*4+3,in+((a-b-c+d)*div*density),t4);
+(a+b+c+d)*div; // no idea what this value should be!
+);
+
+function Hadamad8x8(idx,in,t,warp)
+(
+
+t1=t;
+t*=warp;
+t2=t;
+t*=warp;
+t3=t;
+t*=warp;
+t4=t;
+t*=warp;
+t5=t;
+t*=warp;
+t6=t;
+t*=warp;
+t7=t;
+t*=warp;
+t8=t;
+// Only mod the First delay line
+// Since we're doing serial
+// one mod per FDN should be fine!
+a=DelayOutMod(idx*8+0,t1,rate/srate*2*$pi,depth*srate/1000);
+b=DelayOutMod(idx*8+1,t2,rate/srate*2*$pi,depth*srate/1000);
+c=DelayOut(idx*8+2,t3);
+d=DelayOut(idx*8+3,t4);
+e=DelayOut(idx*8+4,t5);
+f=DelayOut(idx*8+5,t6);
+g=DelayOut(idx*8+6,t7);
+h=DelayOut(idx*8+7,t8);
+
+// /2 no idea here! Density blows up the matrix 
+// So this is def wrong!
+div=1.0/sqrt(8);
+DelayIn(idx*8+0,in+((a+b+c+d+e+f+g+h)*div*density),t1);
+DelayIn(idx*8+1,in+((a-b+c-d+e-f+g-h)*div*density),t2);
+DelayIn(idx*8+2,in+((a+b-c-d+e+f-g-h)*div*density),t3);
+DelayIn(idx*8+3,in+((a-b-c+d+e-f-g+h)*div*density),t4);
+DelayIn(idx*8+4,in+((a+b+c+d-e-f-g-h)*div*density),t5);
+DelayIn(idx*8+5,in+((a-b+c-d-e+f-g+h)*div*density),t6);
+DelayIn(idx*8+6,in+((a+b-c-d-e-f+g+h)*div*density),t7);
+DelayIn(idx*8+7,in+((a-b-c+d-e+f+g-h)*div*density),t8);
+(a+b+c+d+e+f+g+h)*div; // no idea what this value should be!
+);
+
+
+function HouseHolder4x4(idx,in,t,warp)
+(
+td=1;
+t1=t*td;
+td*=warp;
+t2=t*td;
+td*=warp;
+t3=t*td;
+td*=warp;
+t4=t*td;
+td*=warp;
+
+a=DelayOutMod(idx*4+0,t1,rate/srate*2*$pi,depth*srate/1000);
+b=DelayOut(idx*4+1,t2);
+c=DelayOut(idx*4+2,t3);
+d=DelayOut(idx*4+3,t4);
+factor=-2/4*(a+b+c+d);
+// /2 no idea here! Density blows up the matrix 
+// So this is def wrong!
+DelayIn(idx*4+0,in+((a+factor))*density,t1);
+DelayIn(idx*4+1,in+((b+factor))*density,t2);
+DelayIn(idx*4+2,in+((c+factor))*density,t3);
+DelayIn(idx*4+3,in+((d+factor))*density,t4);
+factor;
+);
+
+
+function HouseHolder8x8(idx,in,t,warp)
+(
+
+t1=t;
+t*=warp;
+t2=t;
+t*=warp;
+t3=t;
+t*=warp;
+t4=t;
+t*=warp;
+t5=t;
+t*=warp;
+t6=t;
+t*=warp;
+t7=t;
+t*=warp;
+t8=t;
+// Only mod the First delay line
+// Since we're doing serial
+// one mod per FDN should be fine!
+a=DelayOutMod(idx*8+0,t1,rate/srate*2*$pi,depth*srate/1000);
+b=DelayOut(idx*8+1,t2);
+c=DelayOut(idx*8+2,t3);
+d=DelayOut(idx*8+3,t4);
+e=DelayOut(idx*8+4,t5);
+f=DelayOut(idx*8+5,t6);
+g=DelayOut(idx*8+6,t7);
+h=DelayOut(idx*8+7,t8);
+
+// /2 no idea here! Density blows up the matrix 
+// So this is def wrong!
+factor=-2.0/8*(a+b+c+d+e+f+g+h);
+DelayIn(idx*8+0,in+((a+factor)*density),t1);
+DelayIn(idx*8+1,in+((b+factor)*density),t2);
+DelayIn(idx*8+2,in+((c+factor)*density),t3);
+DelayIn(idx*8+3,in+((d+factor)*density),t4);
+DelayIn(idx*8+4,in+((e+factor)*density),t5);
+DelayIn(idx*8+5,in+((f+factor)*density),t6);
+DelayIn(idx*8+6,in+((g+factor)*density),t7);
+DelayIn(idx*8+7,in+((h+factor)*density),t8);
+factor; 
+);
+
+function HouseHolder12x12(idx,in,t,warp)
+(
+idx*=12;
+t1=t;
+t*=warp;
+t2=t;
+t*=warp;
+t3=t;
+t*=warp;
+t4=t;
+t*=warp;
+t5=t;
+t*=warp;
+t6=t;
+t*=warp;
+t7=t;
+t*=warp;
+t8=t;
+t*=warp;
+t9=t;
+t*=warp;
+t10=t;
+t*=warp;
+t11=t;
+t*=warp;
+t12=t;
+// Only mod the First delay line
+// Since we're doing serial
+// one mod per FDN should be fine!
+a=DelayOutMod(idx*12+0,t1,rate/srate*2*$pi,depth*srate/1000);
+b=DelayOut(idx+1,t2);
+c=DelayOut(idx+2,t3);
+d=DelayOut(idx+3,t4);
+e=DelayOut(idx+4,t5);
+f=DelayOut(idx+5,t6);
+g=DelayOut(idx+6,t7);
+h=DelayOut(idx+7,t8);
+i=DelayOut(idx+8,t9);
+j=DelayOut(idx+9,t10);
+k=DelayOut(idx+10,t11);
+l=DelayOut(idx+11,t12);
+
+// /2 no idea here! Density blows up the matrix 
+// So this is def wrong!
+factor=-2.0/12*(a+b+c+d+e+f+g+h+i+j+k+l);
+DelayIn(idx+0,in+((a+factor)*density),t1);
+DelayIn(idx+1,in+((b+factor)*density),t2);
+DelayIn(idx+2,in+((c+factor)*density),t3);
+DelayIn(idx+3,in+((d+factor)*density),t4);
+DelayIn(idx+4,in+((e+factor)*density),t5);
+DelayIn(idx+5,in+((f+factor)*density),t6);
+DelayIn(idx+6,in+((g+factor)*density),t7);
+DelayIn(idx+7,in+((h+factor)*density),t8);
+DelayIn(idx+8,in+((i+factor)*density),t9);
+DelayIn(idx+9,in+((j+factor)*density),t10);
+DelayIn(idx+10,in+((k+factor)*density),t11);
+DelayIn(idx+11,in+((l+factor)*density),t12);
+factor; 
+);
+@slider
+rtime=slider1*srate;
+bigtime=rtime+2048;
+feedback=slider2;
+density=slider3;
+warp=slider4;
+rate=slider6;
+depth=slider7;
+width=1-slider9;
+count=slider11;
+topography=slider13;
+level=slider20;
+
+
+@sample
+
+wl=xwarp;
+
+outl=(spl0+spl1)/2;
+outr=outl;
+xrtime<rtime ? xrtime+=0.1;
+xrtime>rtime ? xrtime-=0.1;
+xwarp<warp ? xwarp+=0.00001;
+xwarp>warp ? xwarp-=0.00001;
+
+loopc=0;
+
+topography==0 ? 
+(
+while (loopc<count) 
+  (
+  loopc==(count-1) ?  outr=HouseHolder4x4(loopc+2,outl,xrtime,wl*width);  
+  outl=HouseHolder4x4(loopc,outl,xrtime,wl);
+  loopc+=1;
+  wl-=0.001;
+  //wl*=0.96;
+  );
+
+);
+
+topography==1 ? 
+(
+while (loopc<count) 
+  (
+  loopc==(count-1) ?  outr=HouseHolder8x8(loopc+2,outl,xrtime,wl*width);  
+  outl=HouseHolder8x8(loopc,outl,xrtime,wl);
+  loopc+=1;
+  wl-=0.001;
+  //wl*=0.96;
+  );
+
+);
+
+topography==2 ? 
+(
+while (loopc<count) 
+  (
+  loopc==(count-1) ?  outr=HouseHolder12x12(loopc+2,outl,xrtime,wl*width);  
+  outl=HouseHolder12x12(loopc,outl,xrtime,wl);
+  loopc+=1;
+  wl-=0.001;
+  //wl*=0.96;
+  );
+  );
+
+topography==3 ? 
+(
+while (loopc<count) 
+  (
+  loopc==(count-1) ?  outr=Hadamad4x4(loopc+2,outl,xrtime,wl*width);  
+  outl=Hadamad4x4(loopc,outl,xrtime,wl);
+  loopc+=1;
+  wl-=0.001;
+  //wl*=0.96;
+  );
+  );
+  
+topography==4 ? 
+(
+while (loopc<count) 
+    (
+    loopc==(count-1) ?  outr=Hadamad8x8(loopc+2,outl,xrtime,wl*width);  
+    outl=Hadamad8x8(loopc,outl,xrtime,wl);
+    loopc+=1;
+    wl-=0.001;
+    //wl*=0.96;
+    );
+);
+  
+spl0=outl*level/count;
+spl1=outr*level/count;
+
