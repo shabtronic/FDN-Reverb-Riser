@@ -11,7 +11,6 @@ HouseHolder4x4,HouseHolder8x8,Householder12x12,Hadamard2x2,Hadamard4x4 and Hadam
 
 Currently the Best Slow attack Settings are:
 
-![](./Good FDN Settings.png)
-Hadamard4x4 or Householder4x4 with a serial count of 3, Warp of 0.7 and Density of 0.7 - sound good at the higher time lengths.
+![](./Images/Good FDN Settings.png)
 
 sound like total crap at short time lengths!
