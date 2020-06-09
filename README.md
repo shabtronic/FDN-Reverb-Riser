@@ -13,4 +13,4 @@ Currently the Best Slow attack Settings are:
 
 ![](./Images/GoodFDNSettings1.png)
 
-sound like total crap at short time lengths!
+but it sounds like total crap at short time lengths!
