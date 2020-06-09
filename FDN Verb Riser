@@ -9,7 +9,7 @@ desc:FDN Verb Riser
 
 slider1:0.5<0.0001,0.5>Time
 
-slider3:0.5<0.0001,1>Density
+slider3:0.7<0.0001,1>Density
 slider4:0.707<0,1>Warp
 
 slider6:2.4<0.0001,10>Rate
@@ -18,11 +18,17 @@ slider7:1<0,1>Depth
 slider9:0.03<0,0.1>Stereo Width
 slider11:1<1,8,1>Serial Count
 
-slider13:0<0,5,1{House4x4,House8x8,House12x12,Hadamard2x2,Hadamard4x4,Hadamard8x8}>Algo Topography
+slider13:0<0,5,1{none,House3x3,House4x4,House8x8,House12x12,Hadamard2x2,Hadamard4x4,Hadamard8x8}>Serial Algorithm
 
-slider15:10<10,20000>HiPass
-slider16:20000<10,20000>LoPass
-slider20:0.5<0.0001,1>Level
+slider15:10<10,2000>HiPass
+slider16:20000<200,20000>LoPass
+
+slider18:0<0,5,1{none,House3x3,House4x4,House8x8,House12x12,Hadamard2x2,Hadamard4x4,Hadamard8x8}>Diffuser Algorithm
+slider19:70<1,100> Diffuser Time(ms)
+slider20:0.707<0,1> Diffuser Warp
+slider21:0.8<0,1> Diffuser Density 
+
+slider30:0.5<0.0001,1>Level
 
 @init
 
@@ -102,7 +108,7 @@ td*=warp;
 // one mod per FDN should be fine!
 div=1.0/sqrt(4);
 a=DelayOutMod(idx*4+0,t1,rate/srate*2*$pi,depth*srate/1000);
-b=DelayOut(idx*4+1,t2);
+b=DelayOutMod(idx*4+1,t2,rate/srate*2*$pi,depth*srate/1000);
 c=DelayOut(idx*4+2,t3);
 d=DelayOut(idx*4+3,t4);
 // /2 no idea here! Density blows up the matrix 
@@ -158,6 +164,26 @@ DelayIn(idx*8+7,in+((a-b-c+d-e+f+g-h)*div*density),t8);
 (a+b+c+d+e+f+g+h)*div; // no idea what this value should be!
 );
 
+function HouseHolder3x3(idx,in,t,warp)
+(
+td=1;
+t1=t*td;
+td*=warp;
+t2=t*td;
+td*=warp;
+t3=t*td;
+
+a=DelayOutMod(idx*4+0,t1,rate/srate*2*$pi,depth*srate/1000);
+b=DelayOut(idx*4+1,t2);
+c=DelayOut(idx*4+2,t3);
+factor=-2/3*(a+b+c);
+// /2 no idea here! Density blows up the matrix 
+// So this is def wrong!
+DelayIn(idx*4+0,in+((a+factor))*density,t1);
+DelayIn(idx*4+1,in+((b+factor))*density,t2);
+DelayIn(idx*4+2,in+((c+factor))*density,t3);
+factor;
+);
 
 function HouseHolder4x4(idx,in,t,warp)
 (
@@ -300,7 +326,13 @@ depth=slider7;
 width=1-slider9;
 count=slider11;
 topography=slider13;
-level=slider20;
+
+dalgo=slider18;
+dtime=slider19/1000*srate;
+dwarp=slider20;
+ddensity=slider21;
+
+level=slider30;
 
 
 @sample
@@ -308,6 +340,40 @@ level=slider20;
 wl=xwarp;
 
 outl=(spl0+spl1)/2;
+odensity=density;
+odepth=depth;
+depth=0;
+density=ddensity;
+dalgo==1?
+(
+outl=HouseHolder3x3(20,outl,dtime,dwarp);
+);
+dalgo==2?
+(
+outl=HouseHolder4x4(20,outl,dtime,dwarp);
+);
+dalgo==3?
+(
+outl=HouseHolder8x8(20,outl,dtime,dwarp);
+);
+dalgo==4?
+(
+outl=HouseHolder12x12(20,outl,dtime,dwarp);
+);
+dalgo==5?
+(
+outl=Hadamard2x2(20,outl,dtime,dwarp);
+);
+dalgo==6?
+(
+outl=Hadamard4x4(20,outl,dtime,dwarp);
+);
+dalgo==7?
+(
+outl=Hadamard8x8(20,outl,dtime,dwarp);
+);
+depth=odepth;
+density=odensity;
 outr=outl;
 xrtime<rtime ? xrtime+=0.1;
 xrtime>rtime ? xrtime-=0.1;
@@ -315,8 +381,18 @@ xwarp<warp ? xwarp+=0.00001;
 xwarp>warp ? xwarp-=0.00001;
 
 loopc=0;
-
-topography==0 ? 
+topography==1 ? 
+(
+while (loopc<count) 
+  (
+  loopc==(count-1) ?  outr=HouseHolder3x3(loopc+2,outl,xrtime,wl*width);  
+  outl=HouseHolder3x3(loopc,outl,xrtime,wl);
+  loopc+=1;
+  wl-=0.001;
+  //wl*=0.96;
+  );
+);
+topography==2 ? 
 (
 while (loopc<count) 
   (
@@ -328,7 +404,7 @@ while (loopc<count)
   );
 );
 
-topography==1 ? 
+topography==3 ? 
 (
 while (loopc<count) 
   (
@@ -340,7 +416,7 @@ while (loopc<count)
   );
 );
 
-topography==2 ? 
+topography==4 ? 
 (
 while (loopc<count) 
   (
@@ -352,7 +428,7 @@ while (loopc<count)
   );
 );
 
-topography==3 ? 
+topography==5 ? 
 (
 while (loopc<count) 
   (
@@ -365,7 +441,7 @@ while (loopc<count)
 );
   
 
-topography==4 ? 
+topography==6 ? 
 (
 while (loopc<count) 
   (
@@ -377,7 +453,7 @@ while (loopc<count)
   );
 );
   
-topography==5 ? 
+topography==7 ? 
 (
 while (loopc<count) 
     (
