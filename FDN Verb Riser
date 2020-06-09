@@ -10,7 +10,7 @@ desc:FDN Verb Riser
 slider1:0.5<0.0001,0.5>Time
 
 slider3:0.5<0.0001,1>Density
-slider4:0.5<0.0001,1>Warp
+slider4:0.707<0,1>Warp
 
 slider6:2.4<0.0001,10>Rate
 slider7:1<0,1>Depth
@@ -18,7 +18,10 @@ slider7:1<0,1>Depth
 slider9:0.03<0,0.1>Stereo Width
 slider11:1<1,8,1>Serial Count
 
-slider13:0<0,5,1{House4x4,House8x8,House12x12,Hada4x4,Hada8x8}>Algo Topography
+slider13:0<0,5,1{House4x4,House8x8,House12x12,Hadamard2x2,Hadamard4x4,Hadamard8x8}>Algo Topography
+
+slider15:10<10,20000>HiPass
+slider16:20000<10,20000>LoPass
 slider20:0.5<0.0001,1>Level
 
 @init
@@ -59,7 +62,31 @@ Params[idx]=DP;
 out;
 );
 
-function Hadamad4x4(idx,in,t,warp)
+
+function Hadamard2x2(idx,in,t,warp)
+(
+td=1;
+t1=t*td;
+td*=warp;
+t2=t*td;
+
+// Only mod the First delay line
+// Since we're doing serial
+// one mod per FDN should be fine!
+div=1.0/sqrt(2);
+a=DelayOutMod(idx*2+0,t1,rate/srate*2*$pi,depth*srate/1000);
+b=DelayOut(idx*2+1,t2);
+
+// /2 no idea here! Density blows up the matrix 
+// So this is def wrong!
+DelayIn(idx*2+0,in+((a+b)*div*density),t1);
+DelayIn(idx*2+1,in+((-a+b)*div*density),t2);
+
+(a+b)*div; // no idea what this value should be!
+);
+
+
+function Hadamard4x4(idx,in,t,warp)
 (
 td=1;
 t1=t*td;
@@ -73,7 +100,7 @@ td*=warp;
 // Only mod the First delay line
 // Since we're doing serial
 // one mod per FDN should be fine!
-div=1/sqrt(4);
+div=1.0/sqrt(4);
 a=DelayOutMod(idx*4+0,t1,rate/srate*2*$pi,depth*srate/1000);
 b=DelayOut(idx*4+1,t2);
 c=DelayOut(idx*4+2,t3);
@@ -87,7 +114,7 @@ DelayIn(idx*4+3,in+((a-b-c+d)*div*density),t4);
 (a+b+c+d)*div; // no idea what this value should be!
 );
 
-function Hadamad8x8(idx,in,t,warp)
+function Hadamard8x8(idx,in,t,warp)
 (
 
 t1=t;
@@ -299,7 +326,6 @@ while (loopc<count)
   wl-=0.001;
   //wl*=0.96;
   );
-
 );
 
 topography==1 ? 
@@ -312,7 +338,6 @@ while (loopc<count)
   wl-=0.001;
   //wl*=0.96;
   );
-
 );
 
 topography==2 ? 
@@ -325,26 +350,39 @@ while (loopc<count)
   wl-=0.001;
   //wl*=0.96;
   );
-  );
+);
 
 topography==3 ? 
 (
 while (loopc<count) 
   (
-  loopc==(count-1) ?  outr=Hadamad4x4(loopc+2,outl,xrtime,wl*width);  
-  outl=Hadamad4x4(loopc,outl,xrtime,wl);
+  loopc==(count-1) ?  outr=Hadamard2x2(loopc+2,outl,xrtime,wl*width);  
+  outl=Hadamard2x2(loopc,outl,xrtime,wl);
   loopc+=1;
   wl-=0.001;
   //wl*=0.96;
   );
-  );
+);
   
+
 topography==4 ? 
 (
 while (loopc<count) 
+  (
+  loopc==(count-1) ?  outr=Hadamard4x4(loopc+2,outl,xrtime,wl*width);  
+  outl=Hadamard4x4(loopc,outl,xrtime,wl);
+  loopc+=1;
+  wl-=0.001;
+  //wl*=0.96;
+  );
+);
+  
+topography==5 ? 
+(
+while (loopc<count) 
     (
-    loopc==(count-1) ?  outr=Hadamad8x8(loopc+2,outl,xrtime,wl*width);  
-    outl=Hadamad8x8(loopc,outl,xrtime,wl);
+    loopc==(count-1) ?  outr=Hadamard8x8(loopc+2,outl,xrtime,wl*width);  
+    outl=Hadamard8x8(loopc,outl,xrtime,wl);
     loopc+=1;
     wl-=0.001;
     //wl*=0.96;
