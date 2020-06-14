@@ -1,470 +1,402 @@
 desc:FDN Verb Riser
 
 // (C) 2020 S.D.Smith - All rights reserved
+//
 // strictly non commercial use
-// A Super simple FDN reverb 
-// using a Hadamad 4 x 4 Matrix
-// Setup in serial for super slow attack!
-// Based on the FANTASTIC SuperMassive - Valhalla DSP
+//
+// contact: shabtronic@gmail.com
+//
+// A super simple slow attack FDN reverb 
+// using a set of Allpass delays and a HouseHolder matrix
+//
+// Implementation Notes:
+//
+// Reaper JS has a max array memory of 8,000,000 Doubles (64mb)
+// Since we have a max delay line of 0.5 secs
+// That gives us (8,000,000-1000)/24000 = 333 delay lines to 
+// play around with @ 48khz
 
-slider1:0.5<0.0001,0.5>Time
+options:no_meter
+slider1:125<40,500>Time (ms)
+slider2:0.7<0,1>Feedback (Matrix Feedback)
+slider3:0<0,1> Density (Allpass Feedback)
 
-slider3:0.7<0.0001,1>Density
-slider4:0.707<0,1>Warp
+slider4:0.707<0,1>Delay Length Warp
 
-slider6:2.4<0.0001,10>Rate
-slider7:1<0,1>Depth
+slider6:1.414<0,10,0.001>Rate (Hz)
+slider7:0.75<0,1>Depth
 
-slider9:0.03<0,0.1>Stereo Width
-slider11:1<1,8,1>Serial Count
+slider9:0<-1,1>Stereo Width
 
-slider13:0<0,5,1{none,House3x3,House4x4,House8x8,House12x12,Hadamard2x2,Hadamard4x4,Hadamard8x8}>Serial Algorithm
+slider13:0<0,5,1{AllPass8_FDN3,AllPass8_FDN4,AllPass8_FDN6,AllPass8_FDN8,AllPass8_FDN12}>Algorithm
 
 slider15:10<10,2000>HiPass
 slider16:20000<200,20000>LoPass
 
-slider18:0<0,5,1{none,House3x3,House4x4,House8x8,House12x12,Hadamard2x2,Hadamard4x4,Hadamard8x8}>Diffuser Algorithm
-slider19:70<1,100> Diffuser Time(ms)
-slider20:0.707<0,1> Diffuser Warp
-slider21:0.8<0,1> Diffuser Density 
+slider20:0<0,5,1{Reverb,Reverb_Reverse,Reverb_Forward,Reverb_Forward_FDN,Reverb_Reverse_FDN}>Beat Mode
+slider21:1<1,8,1>Beat Count
+slider30:0.5<0,1>Mix
 
-slider30:0.5<0.0001,1>Level
 
 @init
 
-Params=0;
-ModParams=500;
+function BiquadInit()
+(
+  this.l1=this.l2=this.a1=this.a2=this.b0=this.b1=this.b2=0;
+);
 
+function IIRFreq(f)
+(
+  this.fc=(f/srate)/((f/srate)+1);
+);
+
+function ProcessIIRHighPass(in)
+(
+this.a+=(in-this.a)*this.fc;
+in-this.a;
+);
+// RBJ Lowpass
+function Lowpass(freq,q)
+(
+K = tan($PI * freq / srate);
+norm = 1.0 / (1 + K / q + K * K);
+this.b0 = K * K * norm;
+this.b1 = 2.0 * this.b0;
+this.b2 = this.b0;
+this.a1 = 2 * (K * K - 1) * norm;
+this.a2 = (1 - K / q + K * K) * norm;
+);
+
+// RBJ Hipass
+function Hipass(freq,q)
+(  
+K = tan($PI * freq / srate);
+norm = 1 / (1 + K / q + K * K);
+this.b0 = 1 * norm;
+this.b1 = -2 * this.b0;
+this.b2 = this.b0;
+this.a1 = 2 * (K * K - 1) * norm;
+this.a2 = (1 - K / q + K * K) * norm;
+);
+
+function BiquadProcess(in)
+(
+bout = in *this.b0 + this.l1;
+this.l1 = in * this.b1 + this.l2 - this.a1 * bout;
+this.l2 = in * this.b2 - this.a2 * bout;
+bout;
+);
+
+Params=0;                   // Store the delay pointers
+ModParams=250;              // Store the mod phases
+DelayTimes=500;             // Store the delay times
+MaxDelaySize=srate*0.75;    // Max delay of 0.5 secs
+AllPassTimes=750;
+FDNTimes=800;
+// Reset Code
+memset(1001,0,8000000-1001);
+rtime=slider1/1000*srate;
+warp=slider4;
+swidth=1-slider9*0.2;
+xrtime=rtime;
+xwarp=warp ;
+stereowidth=swidth;
+BiHiLeft.BiQuadInit();
+BiHiRight.BiQuadInit();
+BiLoLeft.BiQuadInit();
+BiLoRight.BiQuadInit();
+
+
+function frac(x)
+(
+x-floor(x);
+);
+
+// Clean up a delay line on a time increase only
+function DelayCleanUp(idx,Delay,t)
+(
+ot=DelayTimes[idx];
+DelayTimes[idx]=t;
+
+while (ot>t)
+  (
+  ot-=1;
+  Delay[ot]=0;
+  )
+);
+
+
+function AllPassDelay(idx,in,t,g)
+(
+Delay=1000+(idx*MaxDelaySize);
+DelayCleanUp(idx,Delay,t);
+DP=DelayPointers[idx];
+out=Delay[DP];
+yy = in+out*-g;
+out = yy*g+out;
+Delay[DP] = yy;
+DP+=1;
+DP>=t? DP-=t;
+DelayPointers[idx]=DP;
+out;
+);
 
 function DelayOut(idx,t)
 (
-Delay=1000+(idx*bigtime);
+Delay=1000+(idx*MaxDelaySize);
+DelayCleanUp(idx,Delay,t);
 DP=Params[idx];;
 Delay[DP];
 );
 
 function DelayOutMod(idx,t,speed,depth)
 (
-Delay=1000+(idx*bigtime);
+Delay=1000+(idx*MaxDelaySize);
+DelayCleanUp(idx,Delay,t);
 DP=Params[idx];
 MP=ModParams[idx];
-Mod=(sin(MP+idx/4)+1.1)*depth;
+Mod=(sin(MP+(idx+1))+1)*0.5*depth;
 MP+=speed;
 ModParams[idx]=MP;
 DP+=Mod;
-DP>t? DP-=t;
-Delay[DP];
+DP>=t? DP-=t;
+f=frac(DP);
+out=(1-f)*Delay[DP];
+DP+=1;
+DP>=t? DP-=t;
+out+(f)*Delay[(DP)];
+
 );
 
 function DelayIn(idx,in,t)
 (
-Delay=1000+(idx*bigtime);
+Delay=1000+(idx*MaxDelaySize);
+DelayCleanUp(idx,Delay,t);
 DP=Params[idx];;
 out=Delay[DP];
 Delay[DP]=in;
 DP+=1;
-DP>t? DP=0;
+DP>=t? DP=0;
 Params[idx]=DP;
 out;
 );
 
 
-function Hadamard2x2(idx,in,t,warp)
+function HouseHolder3x3(idx,in,TimeArray)
 (
-td=1;
-t1=t*td;
-td*=warp;
-t2=t*td;
-
-// Only mod the First delay line
-// Since we're doing serial
-// one mod per FDN should be fine!
-div=1.0/sqrt(2);
-a=DelayOutMod(idx*2+0,t1,rate/srate*2*$pi,depth*srate/1000);
-b=DelayOut(idx*2+1,t2);
-
-// /2 no idea here! Density blows up the matrix 
-// So this is def wrong!
-DelayIn(idx*2+0,in+((a+b)*div*density),t1);
-DelayIn(idx*2+1,in+((-a+b)*div*density),t2);
-
-(a+b)*div; // no idea what this value should be!
-);
-
-
-function Hadamard4x4(idx,in,t,warp)
-(
-td=1;
-t1=t*td;
-td*=warp;
-t2=t*td;
-td*=warp;
-t3=t*td;
-td*=warp;
-t4=t*td;
-td*=warp;
-// Only mod the First delay line
-// Since we're doing serial
-// one mod per FDN should be fine!
-div=1.0/sqrt(4);
-a=DelayOutMod(idx*4+0,t1,rate/srate*2*$pi,depth*srate/1000);
-b=DelayOutMod(idx*4+1,t2,rate/srate*2*$pi,depth*srate/1000);
-c=DelayOut(idx*4+2,t3);
-d=DelayOut(idx*4+3,t4);
-// /2 no idea here! Density blows up the matrix 
-// So this is def wrong!
-DelayIn(idx*4+0,in+((a+b+c+d)*div*density),t1);
-DelayIn(idx*4+1,in+((a-b+c-d)*div*density),t2);
-DelayIn(idx*4+2,in+((a+b-c-d)*div*density),t3);
-DelayIn(idx*4+3,in+((a-b-c+d)*div*density),t4);
-(a+b+c+d)*div; // no idea what this value should be!
-);
-
-function Hadamard8x8(idx,in,t,warp)
-(
-
-t1=t;
-t*=warp;
-t2=t;
-t*=warp;
-t3=t;
-t*=warp;
-t4=t;
-t*=warp;
-t5=t;
-t*=warp;
-t6=t;
-t*=warp;
-t7=t;
-t*=warp;
-t8=t;
-// Only mod the First delay line
-// Since we're doing serial
-// one mod per FDN should be fine!
-a=DelayOutMod(idx*8+0,t1,rate/srate*2*$pi,depth*srate/1000);
-b=DelayOutMod(idx*8+1,t2,rate/srate*2*$pi,depth*srate/1000);
-c=DelayOut(idx*8+2,t3);
-d=DelayOut(idx*8+3,t4);
-e=DelayOut(idx*8+4,t5);
-f=DelayOut(idx*8+5,t6);
-g=DelayOut(idx*8+6,t7);
-h=DelayOut(idx*8+7,t8);
-
-// /2 no idea here! Density blows up the matrix 
-// So this is def wrong!
-div=1.0/sqrt(8);
-DelayIn(idx*8+0,in+((a+b+c+d+e+f+g+h)*div*density),t1);
-DelayIn(idx*8+1,in+((a-b+c-d+e-f+g-h)*div*density),t2);
-DelayIn(idx*8+2,in+((a+b-c-d+e+f-g-h)*div*density),t3);
-DelayIn(idx*8+3,in+((a-b-c+d+e-f-g+h)*div*density),t4);
-DelayIn(idx*8+4,in+((a+b+c+d-e-f-g-h)*div*density),t5);
-DelayIn(idx*8+5,in+((a-b+c-d-e+f-g+h)*div*density),t6);
-DelayIn(idx*8+6,in+((a+b-c-d-e-f+g+h)*div*density),t7);
-DelayIn(idx*8+7,in+((a-b-c+d-e+f+g-h)*div*density),t8);
-(a+b+c+d+e+f+g+h)*div; // no idea what this value should be!
-);
-
-function HouseHolder3x3(idx,in,t,warp)
-(
-td=1;
-t1=t*td;
-td*=warp;
-t2=t*td;
-td*=warp;
-t3=t*td;
-
-a=DelayOutMod(idx*4+0,t1,rate/srate*2*$pi,depth*srate/1000);
-b=DelayOut(idx*4+1,t2);
-c=DelayOut(idx*4+2,t3);
+idx*=4; 
+a=DelayOut(idx+0,TimeArray[0]);
+b=DelayOut(idx+1,TimeArray[1]);
+c=DelayOut(idx+2,TimeArray[2]);
 factor=-2/3*(a+b+c);
-// /2 no idea here! Density blows up the matrix 
-// So this is def wrong!
-DelayIn(idx*4+0,in+((a+factor))*density,t1);
-DelayIn(idx*4+1,in+((b+factor))*density,t2);
-DelayIn(idx*4+2,in+((c+factor))*density,t3);
+DelayIn(idx+0,in+((a+factor))*density,TimeArray[0]);
+DelayIn(idx+1,in+((b+factor))*density,TimeArray[1]);
+DelayIn(idx+2,in+((c+factor))*density,TimeArray[2]);
 factor;
 );
 
-function HouseHolder4x4(idx,in,t,warp)
-(
-td=1;
-t1=t*td;
-td*=warp;
-t2=t*td;
-td*=warp;
-t3=t*td;
-td*=warp;
-t4=t*td;
-td*=warp;
 
-a=DelayOutMod(idx*4+0,t1,rate/srate*2*$pi,depth*srate/1000);
-b=DelayOut(idx*4+1,t2);
-c=DelayOut(idx*4+2,t3);
-d=DelayOut(idx*4+3,t4);
+
+function HouseHolder4x4(idx,in,TimeArray)
+(
+idx*=4;
+a=DelayOut(idx+0,TimeArray[0]);
+b=DelayOut(idx+1,TimeArray[1]);
+c=DelayOut(idx+2,TimeArray[2]);
+d=DelayOut(idx+3,TimeArray[3]);
 factor=-2/4*(a+b+c+d);
-// /2 no idea here! Density blows up the matrix 
-// So this is def wrong!
-DelayIn(idx*4+0,in+((a+factor))*density,t1);
-DelayIn(idx*4+1,in+((b+factor))*density,t2);
-DelayIn(idx*4+2,in+((c+factor))*density,t3);
-DelayIn(idx*4+3,in+((d+factor))*density,t4);
+DelayIn(idx+0,in+((a+factor))*density,TimeArray[0]);
+DelayIn(idx+1,in+((b+factor))*density,TimeArray[1]);
+DelayIn(idx+2,in+((c+factor))*density,TimeArray[2]);
+DelayIn(idx+3,in+((d+factor))*density,TimeArray[3]);
 factor;
 );
 
-
-function HouseHolder8x8(idx,in,t,warp)
+function HouseHolder6x6(idx,in,TimeArray)
 (
+idx*=6;
+a=DelayOut(idx+0,TimeArray[0]);
+b=DelayOut(idx+1,TimeArray[1]);
+c=DelayOut(idx+2,TimeArray[2]);
+d=DelayOut(idx+3,TimeArray[3]);
+e=DelayOut(idx+4,TimeArray[4]);
+f=DelayOut(idx+5,TimeArray[5]);
+factor=-2/6*(a+b+c+d+e+f);
+DelayIn(idx+0,in+((a+factor))*density,TimeArray[0]);
+DelayIn(idx+1,in+((b+factor))*density,TimeArray[1]);
+DelayIn(idx+2,in+((c+factor))*density,TimeArray[2]);
+DelayIn(idx+3,in+((d+factor))*density,TimeArray[3]);
+DelayIn(idx+4,in+((c+factor))*density,TimeArray[4]);
+DelayIn(idx+5,in+((d+factor))*density,TimeArray[5]);
+factor;
+);
 
-t1=t;
-t*=warp;
-t2=t;
-t*=warp;
-t3=t;
-t*=warp;
-t4=t;
-t*=warp;
-t5=t;
-t*=warp;
-t6=t;
-t*=warp;
-t7=t;
-t*=warp;
-t8=t;
-// Only mod the First delay line
-// Since we're doing serial
-// one mod per FDN should be fine!
-a=DelayOutMod(idx*8+0,t1,rate/srate*2*$pi,depth*srate/1000);
-b=DelayOut(idx*8+1,t2);
-c=DelayOut(idx*8+2,t3);
-d=DelayOut(idx*8+3,t4);
-e=DelayOut(idx*8+4,t5);
-f=DelayOut(idx*8+5,t6);
-g=DelayOut(idx*8+6,t7);
-h=DelayOut(idx*8+7,t8);
-
-// /2 no idea here! Density blows up the matrix 
-// So this is def wrong!
+function HouseHolder8x8(idx,in,TimeArray)
+(
+idx*=8;
+a=DelayOut(idx+0,TimeArray[0]);
+b=DelayOut(idx+1,TimeArray[1]);
+c=DelayOut(idx+2,TimeArray[2]);
+d=DelayOut(idx+3,TimeArray[3]);
+e=DelayOut(idx+4,TimeArray[4]);
+f=DelayOut(idx+5,TimeArray[5]);
+g=DelayOut(idx+6,TimeArray[6]);
+h=DelayOut(idx+7,TimeArray[7]);
 factor=-2.0/8*(a+b+c+d+e+f+g+h);
-DelayIn(idx*8+0,in+((a+factor)*density),t1);
-DelayIn(idx*8+1,in+((b+factor)*density),t2);
-DelayIn(idx*8+2,in+((c+factor)*density),t3);
-DelayIn(idx*8+3,in+((d+factor)*density),t4);
-DelayIn(idx*8+4,in+((e+factor)*density),t5);
-DelayIn(idx*8+5,in+((f+factor)*density),t6);
-DelayIn(idx*8+6,in+((g+factor)*density),t7);
-DelayIn(idx*8+7,in+((h+factor)*density),t8);
+DelayIn(idx+0,in+((a+factor)*density),TimeArray[0]);
+DelayIn(idx+1,in+((b+factor)*density),TimeArray[1]);
+DelayIn(idx+2,in+((c+factor)*density),TimeArray[2]);
+DelayIn(idx+3,in+((d+factor)*density),TimeArray[3]);
+DelayIn(idx+4,in+((e+factor)*density),TimeArray[4]);
+DelayIn(idx+5,in+((f+factor)*density),TimeArray[5]);
+DelayIn(idx+6,in+((g+factor)*density),TimeArray[6]);
+DelayIn(idx+7,in+((h+factor)*density),TimeArray[7]);
 factor; 
 );
 
-function HouseHolder12x12(idx,in,t,warp)
+function HouseHolder12x12(idx,in,TimeArray)
 (
 idx*=12;
-t1=t;
-t*=warp;
-t2=t;
-t*=warp;
-t3=t;
-t*=warp;
-t4=t;
-t*=warp;
-t5=t;
-t*=warp;
-t6=t;
-t*=warp;
-t7=t;
-t*=warp;
-t8=t;
-t*=warp;
-t9=t;
-t*=warp;
-t10=t;
-t*=warp;
-t11=t;
-t*=warp;
-t12=t;
-// Only mod the First delay line
-// Since we're doing serial
-// one mod per FDN should be fine!
-a=DelayOutMod(idx*12+0,t1,rate/srate*2*$pi,depth*srate/1000);
-b=DelayOut(idx+1,t2);
-c=DelayOut(idx+2,t3);
-d=DelayOut(idx+3,t4);
-e=DelayOut(idx+4,t5);
-f=DelayOut(idx+5,t6);
-g=DelayOut(idx+6,t7);
-h=DelayOut(idx+7,t8);
-i=DelayOut(idx+8,t9);
-j=DelayOut(idx+9,t10);
-k=DelayOut(idx+10,t11);
-l=DelayOut(idx+11,t12);
-
-// /2 no idea here! Density blows up the matrix 
-// So this is def wrong!
+a=DelayOut(idx+0,TimeArray[0]);
+b=DelayOut(idx+1,TimeArray[1]);
+c=DelayOut(idx+2,TimeArray[2]);
+d=DelayOut(idx+3,TimeArray[3]);
+e=DelayOut(idx+4,TimeArray[4]);
+f=DelayOut(idx+5,TimeArray[5]);
+g=DelayOut(idx+6,TimeArray[6]);
+h=DelayOut(idx+7,TimeArray[7]);
+i=DelayOut(idx+8,TimeArray[8]);
+j=DelayOut(idx+9,TimeArray[9]);
+k=DelayOut(idx+10,TimeArray[10]);
+l=DelayOut(idx+11,TimeArray[11]);
 factor=-2.0/12*(a+b+c+d+e+f+g+h+i+j+k+l);
-DelayIn(idx+0,in+((a+factor)*density),t1);
-DelayIn(idx+1,in+((b+factor)*density),t2);
-DelayIn(idx+2,in+((c+factor)*density),t3);
-DelayIn(idx+3,in+((d+factor)*density),t4);
-DelayIn(idx+4,in+((e+factor)*density),t5);
-DelayIn(idx+5,in+((f+factor)*density),t6);
-DelayIn(idx+6,in+((g+factor)*density),t7);
-DelayIn(idx+7,in+((h+factor)*density),t8);
-DelayIn(idx+8,in+((i+factor)*density),t9);
-DelayIn(idx+9,in+((j+factor)*density),t10);
-DelayIn(idx+10,in+((k+factor)*density),t11);
-DelayIn(idx+11,in+((l+factor)*density),t12);
+DelayIn(idx+0,in+((a+factor)*density),TimeArray[0]);
+DelayIn(idx+1,in+((b+factor)*density),TimeArray[1]);
+DelayIn(idx+2,in+((c+factor)*density),TimeArray[2]);
+DelayIn(idx+3,in+((d+factor)*density),TimeArray[3]);
+DelayIn(idx+4,in+((e+factor)*density),TimeArray[4]);
+DelayIn(idx+5,in+((f+factor)*density),TimeArray[5]);
+DelayIn(idx+6,in+((g+factor)*density),TimeArray[6]);
+DelayIn(idx+7,in+((h+factor)*density),TimeArray[7]);
+DelayIn(idx+8,in+((i+factor)*density),TimeArray[8]);
+DelayIn(idx+9,in+((j+factor)*density),TimeArray[9]);
+DelayIn(idx+10,in+((k+factor)*density),TimeArray[10]);
+DelayIn(idx+11,in+((l+factor)*density),TimeArray[11]);
 factor; 
 );
+
+function CalcDelayLengths(length,warp,swidth)
+(
+c=0;
+while (c<12)
+  (
+  AllPassTimes[c]=floor(length);
+  swidth<0 ?
+  (
+  FDNTimes[c]=floor(length);
+  FDNTimes[c+12]=floor(length*(1--swidth*0.2));
+  )
+  :
+  (
+  FDNTimes[c]=floor(length*(1-swidth*0.2));
+  FDNTimes[c+12]=floor(length);
+  );
+  AllPassTimes[c]<1? AllPassTimes[c]=1;
+  FDNTimes[c]<1? FDNTimes[c]=1;
+  FDNTimes[c+12]<1? FDNTimes[c+12]=1;
+  length*=warp;
+  c+=1;
+  );
+);
 @slider
-rtime=slider1*srate;
-bigtime=rtime+2048;
-feedback=slider2;
-density=slider3;
+rtime=slider1/1000*srate;
+
+density=slider2;
+apdensity=slider3;
 warp=slider4;
+
 rate=slider6;
-depth=slider7;
-width=1-slider9;
-count=slider11;
-topography=slider13;
+gdepth=slider7;
+modrate=rate/srate*2*$pi;
+modlength=srate/250;
+moddepth=min(1.0/(2.0*rate),1)*gdepth*modlength;
 
-dalgo=slider18;
-dtime=slider19/1000*srate;
-dwarp=slider20;
-ddensity=slider21;
+swidth=slider9;
 
-level=slider30;
+CalcDelayLengths(rtime,warp,swidth);
+
+topology=slider13;
+
+HiFreq=slider15;
+LoFreq=slider16;
+
+BiHiLeft.Hipass(HiFreq,0.75);
+BiHiRight.Hipass(HiFreq,0.75);
+BiLoLeft.Lowpass(LoFreq,0.75);
+BiLoRight.Lowpass(LoFreq,0.75);
+
+
+
+mix=slider30;
+
+// Clear delay lines if we change topology or mode
+lasttop!=topology ? memset(1001,0,8000000-1001);
+lasttop=topology;
 
 
 @sample
 
-wl=xwarp;
+outl=spl0;
+outr=spl1;
 
-outl=(spl0+spl1)/2;
-odensity=density;
-odepth=depth;
-depth=0;
-density=ddensity;
-dalgo==1?
-(
-outl=HouseHolder3x3(20,outl,dtime,dwarp);
-);
-dalgo==2?
-(
-outl=HouseHolder4x4(20,outl,dtime,dwarp);
-);
-dalgo==3?
-(
-outl=HouseHolder8x8(20,outl,dtime,dwarp);
-);
-dalgo==4?
-(
-outl=HouseHolder12x12(20,outl,dtime,dwarp);
-);
-dalgo==5?
-(
-outl=Hadamard2x2(20,outl,dtime,dwarp);
-);
-dalgo==6?
-(
-outl=Hadamard4x4(20,outl,dtime,dwarp);
-);
-dalgo==7?
-(
-outl=Hadamard8x8(20,outl,dtime,dwarp);
-);
-depth=odepth;
-density=odensity;
-outr=outl;
-xrtime<rtime ? xrtime+=0.1;
-xrtime>rtime ? xrtime-=0.1;
-xwarp<warp ? xwarp+=0.00001;
-xwarp>warp ? xwarp-=0.00001;
 
-loopc=0;
-topography==1 ? 
-(
-while (loopc<count) 
+
+x=0;
+while (x<8)
   (
-  loopc==(count-1) ?  outr=HouseHolder3x3(loopc+2,outl,xrtime,wl*width);  
-  outl=HouseHolder3x3(loopc,outl,xrtime,wl);
-  loopc+=1;
-  wl-=0.001;
-  //wl*=0.96;
+  // Chorus style modulation  
+  DelayIn(x*2,outl,modlength);
+  outl=DelayOutMod(x*2,modlength,modrate,moddepth);
+  // Allpass Riser
+  outl=AllPassDelay(x*2+1,outl,AllPassTimes[x],min(0.5,max(apdensity/2,density)));
+  x+=1;
   );
-);
-topography==2 ? 
+
+topology==0 ? 
 (
-while (loopc<count) 
-  (
-  loopc==(count-1) ?  outr=HouseHolder4x4(loopc+2,outl,xrtime,wl*width);  
-  outl=HouseHolder4x4(loopc,outl,xrtime,wl);
-  loopc+=1;
-  wl-=0.001;
-  //wl*=0.96;
-  );
+outr=HouseHolder3x3(x*2,outl,FDNTimes);
+outl=HouseHolder3x3(x*2+1,outl,FDNTimes+12);
 );
 
-topography==3 ? 
+topology==1 ? 
 (
-while (loopc<count) 
-  (
-  loopc==(count-1) ?  outr=HouseHolder8x8(loopc+2,outl,xrtime,wl*width);  
-  outl=HouseHolder8x8(loopc,outl,xrtime,wl);
-  loopc+=1;
-  wl-=0.001;
-  //wl*=0.96;
-  );
+outr=HouseHolder4x4(x*2+1,outl,FDNTimes);
+outl=HouseHolder4x4(x*2,outl,FDNTimes+12);
 );
 
-topography==4 ? 
+topology==2 ? 
 (
-while (loopc<count) 
-  (
-  loopc==(count-1) ?  outr=HouseHolder12x12(loopc+2,outl,xrtime,wl*width);  
-  outl=HouseHolder12x12(loopc,outl,xrtime,wl);
-  loopc+=1;
-  wl-=0.001;
-  //wl*=0.96;
-  );
+outr=HouseHolder6x6(x*2,outl,FDNTimes);
+outl=HouseHolder6x6(x*2+1,outl,FDNTimes+12);
 );
 
-topography==5 ? 
+topology==3 ? 
 (
-while (loopc<count) 
-  (
-  loopc==(count-1) ?  outr=Hadamard2x2(loopc+2,outl,xrtime,wl*width);  
-  outl=Hadamard2x2(loopc,outl,xrtime,wl);
-  loopc+=1;
-  wl-=0.001;
-  //wl*=0.96;
-  );
+outr=HouseHolder8x8(x*2,outl,FDNTimes);
+outl=HouseHolder8x8(x*2+1,outl,FDNTimes+12);
 );
-  
 
-topography==6 ? 
+topology==4 ? 
 (
-while (loopc<count) 
-  (
-  loopc==(count-1) ?  outr=Hadamard4x4(loopc+2,outl,xrtime,wl*width);  
-  outl=Hadamard4x4(loopc,outl,xrtime,wl);
-  loopc+=1;
-  wl-=0.001;
-  //wl*=0.96;
-  );
+outr=HouseHolder12x12(x*2,outl,FDNTimes);
+outl=HouseHolder12x12(x*2+1,outl,FDNTimes+12);
 );
-  
-topography==7 ? 
-(
-while (loopc<count) 
-    (
-    loopc==(count-1) ?  outr=Hadamard8x8(loopc+2,outl,xrtime,wl*width);  
-    outl=Hadamard8x8(loopc,outl,xrtime,wl);
-    loopc+=1;
-    wl-=0.001;
-    //wl*=0.96;
-    );
-);
-  
-spl0=outl*level/count;
-spl1=outr*level/count;
+
+outl=BiLoLeft.BiquadProcess(outl);
+outr=BiLoRight.BiquadProcess(outr);
+outl=BiHiLeft.BiquadProcess(outl);
+outr=BiHiRight.BiquadProcess(outr);
+
+spl0=spl0*(1-mix)+outl/1.5*mix;
+spl1=spl1*(1-mix)+outr/1.5*mix;
 
