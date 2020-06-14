@@ -9,8 +9,7 @@ Written purely in Reaper JS
 Contains
 HouseHolder4x4,HouseHolder8x8,Householder12x12,Hadamard2x2,Hadamard4x4 and Hadamard8x8 matrices to play around with
 
-Currently the Best Slow attack Settings are:
+These are the Best Slow attack Settings:
 
 ![](./Images/GoodFDNSettings1.png)
 
-but it sounds like total crap at short time lengths!
