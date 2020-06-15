@@ -9,3 +9,4 @@ These are the Best Slow attack Settings:
 
 ![](./Images/FDN_Riser_Settings.png)
 
+https://soundcloud.com/shabtronica/sets/fdn-slow-attack-comparision
