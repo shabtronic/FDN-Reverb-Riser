@@ -7,7 +7,7 @@ Written purely in Reaper JS
 
 These are the Best Slow attack Settings:
 
-![](./Images/FDN Riser UI.png)
+![](./Images/FDN-Riser-UI.png)
 
 
 Some sound examples here:
