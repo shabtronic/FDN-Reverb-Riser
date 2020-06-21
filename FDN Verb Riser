@@ -18,22 +18,6 @@ desc:FDN Verb Riser
 
 options:no_meter
 import stronic-lib.js-inc
-//slider1:125<40,500>Time (ms)
-//slider2:0.7<0,1>Feedback (Matrix Feedback)
-//slider3:0<-1,1>Density (Allpass Feedback)
-//slider4:0.707<0,1>Delay Length Warp
-//slider6:1.414<0,10,0.001>Mod Rate (Hz)
-//slider7:0.75<0,1>Mod Depth
-//slider9:0<-1,1>Stereo Width
-//slider13:0<0,5,1{AllPass_[MOD]_FDN_EQ,AllPass_[MOD]_FDN_[Pitch]_EQ}>-Algorithm
-//slider14:4<2,32,1>Smoothness
-//slider17:10<40,2000>HiPass
-//slider18:20000<200,15000>LoPass
-//slider20:0<0,5,1{Reverb,Reverb_Reverse,Reverb_Forward,Reverb_Forward_FDN,Reverb_Reverse_FDN}>-Beat Mode
-//slider21:1<1,8,1>-Beat Count
-//slider30:0.5<0,1>Mix
-
-
 
 @init
 
