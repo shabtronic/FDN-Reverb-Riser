@@ -5,7 +5,8 @@ This is the second pass attempt to get a slow attack reverb working
 
 Written purely in Reaper JS
 
-These are the Best Slow attack Settings:
+currently using a small UI/DSP lib: https://github.com/shabtronic/ReaperJSLib
+
 
 ![](./Images/FDN-Riser-UI.png)
 
