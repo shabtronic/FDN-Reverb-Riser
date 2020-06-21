@@ -17,84 +17,51 @@ desc:FDN Verb Riser
 // play around with @ 48khz
 
 options:no_meter
-slider1:125<40,500>Time (ms)
-slider2:0.7<0,1>Feedback (Matrix Feedback)
-slider3:0<0,1> Density (Allpass Feedback)
+import stronic-lib.js-inc
+//slider1:125<40,500>Time (ms)
+//slider2:0.7<0,1>Feedback (Matrix Feedback)
+//slider3:0<-1,1>Density (Allpass Feedback)
+//slider4:0.707<0,1>Delay Length Warp
+//slider6:1.414<0,10,0.001>Mod Rate (Hz)
+//slider7:0.75<0,1>Mod Depth
+//slider9:0<-1,1>Stereo Width
+//slider13:0<0,5,1{AllPass_[MOD]_FDN_EQ,AllPass_[MOD]_FDN_[Pitch]_EQ}>-Algorithm
+//slider14:4<2,32,1>Smoothness
+//slider17:10<40,2000>HiPass
+//slider18:20000<200,15000>LoPass
+//slider20:0<0,5,1{Reverb,Reverb_Reverse,Reverb_Forward,Reverb_Forward_FDN,Reverb_Reverse_FDN}>-Beat Mode
+//slider21:1<1,8,1>-Beat Count
+//slider30:0.5<0,1>Mix
 
-slider4:0.707<0,1>Delay Length Warp
-
-slider6:1.414<0,10,0.001>Rate (Hz)
-slider7:0.75<0,1>Depth
-
-slider9:0<-1,1>Stereo Width
-
-slider13:0<0,5,1{AllPass8_FDN3,AllPass8_FDN4,AllPass8_FDN6,AllPass8_FDN8,AllPass8_FDN12}>Algorithm
-
-slider15:10<10,2000>HiPass
-slider16:20000<200,20000>LoPass
-
-slider20:0<0,5,1{Reverb,Reverb_Reverse,Reverb_Forward,Reverb_Forward_FDN,Reverb_Reverse_FDN}>Beat Mode
-slider21:1<1,8,1>Beat Count
-slider30:0.5<0,1>Mix
 
 
 @init
 
-function BiquadInit()
-(
-  this.l1=this.l2=this.a1=this.a2=this.b0=this.b1=this.b2=0;
-);
+AllPassTimes=GetMem(128);
+FDNTimes=GetMem(128);
+FDNTempFactors=GetMem(128);
+InitDelayLines(128,0.5);  
 
-function IIRFreq(f)
-(
-  this.fc=(f/srate)/((f/srate)+1);
-);
 
-function ProcessIIRHighPass(in)
-(
-this.a+=(in-this.a)*this.fc;
-in-this.a;
-);
-// RBJ Lowpass
-function Lowpass(freq,q)
-(
-K = tan($PI * freq / srate);
-norm = 1.0 / (1 + K / q + K * K);
-this.b0 = K * K * norm;
-this.b1 = 2.0 * this.b0;
-this.b2 = this.b0;
-this.a1 = 2 * (K * K - 1) * norm;
-this.a2 = (1 - K / q + K * K) * norm;
-);
+// Create Sliders
+//0
+AddSliderTime("Time",500,40,500,"Controls the delay time");
+AddSliderPercent("Feedback",0.7,0,1,"set the FDN matrix feedback - that's essential the reverb decay");
+AddSliderPercent("Density",0.7,-1,1,"");
+AddSliderPercent("Warp",0.7,0,1,"");
+AddSliderFreq("Mod rate",1.414,0,10,"");
+//5
+AddSliderPercent("Depth",0.75,0,1,"");
+AddSliderPercent("Width",0.25,-1,1,"");
+AddSliderInt("Smoothness",0.7,0,1,"");
+AddSliderFreq("Hi pass",10,10,2000,"");
 
-// RBJ Hipass
-function Hipass(freq,q)
-(  
-K = tan($PI * freq / srate);
-norm = 1 / (1 + K / q + K * K);
-this.b0 = 1 * norm;
-this.b1 = -2 * this.b0;
-this.b2 = this.b0;
-this.a1 = 2 * (K * K - 1) * norm;
-this.a2 = (1 - K / q + K * K) * norm;
-);
+AddSliderFreq("Lo pass",20000,200,20000,"");
+//10
+AddSliderPercent("Mix",0.5,0,1,"");
 
-function BiquadProcess(in)
-(
-bout = in *this.b0 + this.l1;
-this.l1 = in * this.b1 + this.l2 - this.a1 * bout;
-this.l2 = in * this.b2 - this.a2 * bout;
-bout;
-);
-
-Params=0;                   // Store the delay pointers
-ModParams=250;              // Store the mod phases
-DelayTimes=500;             // Store the delay times
-MaxDelaySize=srate*0.75;    // Max delay of 0.5 secs
-AllPassTimes=750;
-FDNTimes=800;
 // Reset Code
-memset(1001,0,8000000-1001);
+memset(DelayLines,0,8000000-DelayLines);
 rtime=slider1/1000*srate;
 warp=slider4;
 swidth=1-slider9*0.2;
@@ -107,296 +74,170 @@ BiLoLeft.BiQuadInit();
 BiLoRight.BiQuadInit();
 
 
-function frac(x)
+// sizes 1,2,3 arnt really valid HouseHolder matrices 
+// Lose a little performance doing it with a loop
+// in JS - keeps the code smaller
+function HouseHolderX(hsize,idx,in,TimeArray,recip)
 (
-x-floor(x);
-);
-
-// Clean up a delay line on a time increase only
-function DelayCleanUp(idx,Delay,t)
-(
-ot=DelayTimes[idx];
-DelayTimes[idx]=t;
-
-while (ot>t)
+cc=0;
+factor=0;
+while (cc<hsize)
+ (
+ FDNTempFactors[cc]=DelayOut(idx+cc);
+ factor+=FDNTempFactors[cc];
+ cc+=1;
+ );
+factor*=recip;
+cc=0;
+while (cc<hsize)
   (
-  ot-=1;
-  Delay[ot]=0;
-  )
-);
-
-
-function AllPassDelay(idx,in,t,g)
-(
-Delay=1000+(idx*MaxDelaySize);
-DelayCleanUp(idx,Delay,t);
-DP=DelayPointers[idx];
-out=Delay[DP];
-yy = in+out*-g;
-out = yy*g+out;
-Delay[DP] = yy;
-DP+=1;
-DP>=t? DP-=t;
-DelayPointers[idx]=DP;
-out;
-);
-
-function DelayOut(idx,t)
-(
-Delay=1000+(idx*MaxDelaySize);
-DelayCleanUp(idx,Delay,t);
-DP=Params[idx];;
-Delay[DP];
-);
-
-function DelayOutMod(idx,t,speed,depth)
-(
-Delay=1000+(idx*MaxDelaySize);
-DelayCleanUp(idx,Delay,t);
-DP=Params[idx];
-MP=ModParams[idx];
-Mod=(sin(MP+(idx+1))+1)*0.5*depth;
-MP+=speed;
-ModParams[idx]=MP;
-DP+=Mod;
-DP>=t? DP-=t;
-f=frac(DP);
-out=(1-f)*Delay[DP];
-DP+=1;
-DP>=t? DP-=t;
-out+(f)*Delay[(DP)];
-
-);
-
-function DelayIn(idx,in,t)
-(
-Delay=1000+(idx*MaxDelaySize);
-DelayCleanUp(idx,Delay,t);
-DP=Params[idx];;
-out=Delay[DP];
-Delay[DP]=in;
-DP+=1;
-DP>=t? DP=0;
-Params[idx]=DP;
-out;
-);
-
-
-function HouseHolder3x3(idx,in,TimeArray)
-(
-idx*=4; 
-a=DelayOut(idx+0,TimeArray[0]);
-b=DelayOut(idx+1,TimeArray[1]);
-c=DelayOut(idx+2,TimeArray[2]);
-factor=-2/3*(a+b+c);
-DelayIn(idx+0,in+((a+factor))*density,TimeArray[0]);
-DelayIn(idx+1,in+((b+factor))*density,TimeArray[1]);
-DelayIn(idx+2,in+((c+factor))*density,TimeArray[2]);
+  DelayIn(idx+cc,in+(FDNTempFactors[cc]+factor)*density,TimeArray[cc]);
+  cc+=1;
+  );
 factor;
 );
 
 
-
-function HouseHolder4x4(idx,in,TimeArray)
-(
-idx*=4;
-a=DelayOut(idx+0,TimeArray[0]);
-b=DelayOut(idx+1,TimeArray[1]);
-c=DelayOut(idx+2,TimeArray[2]);
-d=DelayOut(idx+3,TimeArray[3]);
-factor=-2/4*(a+b+c+d);
-DelayIn(idx+0,in+((a+factor))*density,TimeArray[0]);
-DelayIn(idx+1,in+((b+factor))*density,TimeArray[1]);
-DelayIn(idx+2,in+((c+factor))*density,TimeArray[2]);
-DelayIn(idx+3,in+((d+factor))*density,TimeArray[3]);
-factor;
-);
-
-function HouseHolder6x6(idx,in,TimeArray)
-(
-idx*=6;
-a=DelayOut(idx+0,TimeArray[0]);
-b=DelayOut(idx+1,TimeArray[1]);
-c=DelayOut(idx+2,TimeArray[2]);
-d=DelayOut(idx+3,TimeArray[3]);
-e=DelayOut(idx+4,TimeArray[4]);
-f=DelayOut(idx+5,TimeArray[5]);
-factor=-2/6*(a+b+c+d+e+f);
-DelayIn(idx+0,in+((a+factor))*density,TimeArray[0]);
-DelayIn(idx+1,in+((b+factor))*density,TimeArray[1]);
-DelayIn(idx+2,in+((c+factor))*density,TimeArray[2]);
-DelayIn(idx+3,in+((d+factor))*density,TimeArray[3]);
-DelayIn(idx+4,in+((c+factor))*density,TimeArray[4]);
-DelayIn(idx+5,in+((d+factor))*density,TimeArray[5]);
-factor;
-);
-
-function HouseHolder8x8(idx,in,TimeArray)
-(
-idx*=8;
-a=DelayOut(idx+0,TimeArray[0]);
-b=DelayOut(idx+1,TimeArray[1]);
-c=DelayOut(idx+2,TimeArray[2]);
-d=DelayOut(idx+3,TimeArray[3]);
-e=DelayOut(idx+4,TimeArray[4]);
-f=DelayOut(idx+5,TimeArray[5]);
-g=DelayOut(idx+6,TimeArray[6]);
-h=DelayOut(idx+7,TimeArray[7]);
-factor=-2.0/8*(a+b+c+d+e+f+g+h);
-DelayIn(idx+0,in+((a+factor)*density),TimeArray[0]);
-DelayIn(idx+1,in+((b+factor)*density),TimeArray[1]);
-DelayIn(idx+2,in+((c+factor)*density),TimeArray[2]);
-DelayIn(idx+3,in+((d+factor)*density),TimeArray[3]);
-DelayIn(idx+4,in+((e+factor)*density),TimeArray[4]);
-DelayIn(idx+5,in+((f+factor)*density),TimeArray[5]);
-DelayIn(idx+6,in+((g+factor)*density),TimeArray[6]);
-DelayIn(idx+7,in+((h+factor)*density),TimeArray[7]);
-factor; 
-);
-
-function HouseHolder12x12(idx,in,TimeArray)
-(
-idx*=12;
-a=DelayOut(idx+0,TimeArray[0]);
-b=DelayOut(idx+1,TimeArray[1]);
-c=DelayOut(idx+2,TimeArray[2]);
-d=DelayOut(idx+3,TimeArray[3]);
-e=DelayOut(idx+4,TimeArray[4]);
-f=DelayOut(idx+5,TimeArray[5]);
-g=DelayOut(idx+6,TimeArray[6]);
-h=DelayOut(idx+7,TimeArray[7]);
-i=DelayOut(idx+8,TimeArray[8]);
-j=DelayOut(idx+9,TimeArray[9]);
-k=DelayOut(idx+10,TimeArray[10]);
-l=DelayOut(idx+11,TimeArray[11]);
-factor=-2.0/12*(a+b+c+d+e+f+g+h+i+j+k+l);
-DelayIn(idx+0,in+((a+factor)*density),TimeArray[0]);
-DelayIn(idx+1,in+((b+factor)*density),TimeArray[1]);
-DelayIn(idx+2,in+((c+factor)*density),TimeArray[2]);
-DelayIn(idx+3,in+((d+factor)*density),TimeArray[3]);
-DelayIn(idx+4,in+((e+factor)*density),TimeArray[4]);
-DelayIn(idx+5,in+((f+factor)*density),TimeArray[5]);
-DelayIn(idx+6,in+((g+factor)*density),TimeArray[6]);
-DelayIn(idx+7,in+((h+factor)*density),TimeArray[7]);
-DelayIn(idx+8,in+((i+factor)*density),TimeArray[8]);
-DelayIn(idx+9,in+((j+factor)*density),TimeArray[9]);
-DelayIn(idx+10,in+((k+factor)*density),TimeArray[10]);
-DelayIn(idx+11,in+((l+factor)*density),TimeArray[11]);
-factor; 
-);
 
 function CalcDelayLengths(length,warp,swidth)
 (
 c=0;
+l2=length;
+warp2=1-warp;
 while (c<12)
   (
   AllPassTimes[c]=floor(length);
   swidth<0 ?
   (
-  FDNTimes[c]=floor(length);
-  FDNTimes[c+12]=floor(length*(1--swidth*0.2));
+  FDNTimes[c]=floor(l2);
+  FDNTimes[c+12]=floor(l2*(1--swidth*0.02));
   )
   :
   (
-  FDNTimes[c]=floor(length*(1-swidth*0.2));
-  FDNTimes[c+12]=floor(length);
+  FDNTimes[c]=floor(l2*(1-swidth*0.02));
+  FDNTimes[c+12]=floor(l2);
   );
   AllPassTimes[c]<1? AllPassTimes[c]=1;
   FDNTimes[c]<1? FDNTimes[c]=1;
   FDNTimes[c+12]<1? FDNTimes[c+12]=1;
   length*=warp;
+  l2*=warp2;
   c+=1;
   );
 );
-@slider
-rtime=slider1/1000*srate;
 
+
+@block
+
+rtime=slider1/1000*srate;
 density=slider2;
+dlevel=pow(max(density,0.75)+0.5,4);
 apdensity=slider3;
 warp=slider4;
-
-rate=slider6;
-gdepth=slider7;
+rate=slider5;
+gdepth=slider6;
 modrate=rate/srate*2*$pi;
-modlength=srate/250;
-moddepth=min(1.0/(2.0*rate),1)*gdepth*modlength;
-
-swidth=slider9;
-
+modlength=srate/250+1;
+moddepth=min(1.0/(2.0*rate),1)*gdepth*modlength*0.5;
+swidth=slider7;
 CalcDelayLengths(rtime,warp,swidth);
+housesize=4;//slider8;
+HiFreq=slider9;
+LoFreq=slider10;
 
-topology=slider13;
+BiHiLeft.Hipass(HiFreq,0.25);
+BiHiRight.Hipass(HiFreq,0.25);
+BiLoLeft.Lowpass(LoFreq,0.25);
+BiLoRight.Lowpass(LoFreq,0.25);
 
-HiFreq=slider15;
-LoFreq=slider16;
+mix=slider11;
 
-BiHiLeft.Hipass(HiFreq,0.75);
-BiHiRight.Hipass(HiFreq,0.75);
-BiLoLeft.Lowpass(LoFreq,0.75);
-BiLoRight.Lowpass(LoFreq,0.75);
+housesizerecip=-2.0/housesize;
+@gfx 772 392
+TitleColour(1,1,1,1); // white
+ValueColour(1,0.75,0,1); // orange
+// Background Colour
+rgba(0.15,0.05,0.3,1); // purple
+colorinc(-0.2);
+gfx_rect(0,0,gfx_w,gfx_h);
+//StartGFX(772,392,29,14);    // uncomment this if u want fixed size
+StartGFX(gfx_w,gfx_h,29,14);  // e.t.c.
 
 
 
-mix=slider30;
 
-// Clear delay lines if we change topology or mode
-lasttop!=topology ? memset(1001,0,8000000-1001);
-lasttop=topology;
+rectcurve=cell_len/2;
+pushcolour(1,1,1,1);
+gfx_setfont(1,"Arial bold",cell_len);
+Text(1,2,"FDN Reverb Riser",8);
 
+gfx_setfont(1,"Arial",cell_len/2);
+colorinc(-0.5);
+Text(28,1.5,"Version 1.0.49",2+8);
+Text(28,2,"Shabtronic@gmail.com",2+8);
+
+gfx_setfont(1,"Arial",cell_len/1.5);
+Text(1,13,"Hint: ",0);
+popcolour();
+gfx_setfont(1,"Arial",cell_len/1.5);
+
+rgba(0.15,0.05,0.3,1);
+roundrect(1,2,5,13,rectcurve);
+MediumDial(3,5,10); // mix
+MediumDial(3,10,6);  // width
+rectborder(4);
+borderlight(0.25);
+
+colorinc(-0.025);
+roundrect(5,2,16,13,rectcurve);
+BigDial(8,6,0); // time
+BigDial(13,6,3); //warp
+
+colorinc(-0.025);
+roundrect(16,2,20,13,rectcurve);
+MediumDial(18,5,1); // Feedback
+MediumDial(18,10,2);  // Density
+
+colorinc(-0.025);
+roundrect(16+4,2,20+4,13,rectcurve);
+MediumDial(18+4,5,4); // rate
+MediumDial(18+4,10,5);  // depth
+
+colorinc(-0.025);
+roundrect(16+8,2,20+8,13,rectcurve);
+MediumDial(18+8,5,8); // Hi
+MediumDial(18+8,10,9);  // Lo
+EndGFX();
 
 @sample
 
+// Need to sort out stereo->mono mix
 outl=spl0;
 outr=spl1;
 
-
-
 x=0;
+md=1;
+
 while (x<8)
   (
   // Chorus style modulation  
   DelayIn(x*2,outl,modlength);
-  outl=DelayOutMod(x*2,modlength,modrate,moddepth);
+  outl=DelayOutMod(x*2,modlength,modrate/md,moddepth*md);
+  md*=0.9;
   // Allpass Riser
-  outl=AllPassDelay(x*2+1,outl,AllPassTimes[x],min(0.5,max(apdensity/2,density)));
+  outl=AllPassDelay(x*2+1,outl,AllPassTimes[x],apdensity);
   x+=1;
   );
 
-topology==0 ? 
-(
-outr=HouseHolder3x3(x*2,outl,FDNTimes);
-outl=HouseHolder3x3(x*2+1,outl,FDNTimes+12);
-);
 
-topology==1 ? 
-(
-outr=HouseHolder4x4(x*2+1,outl,FDNTimes);
-outl=HouseHolder4x4(x*2,outl,FDNTimes+12);
-);
-
-topology==2 ? 
-(
-outr=HouseHolder6x6(x*2,outl,FDNTimes);
-outl=HouseHolder6x6(x*2+1,outl,FDNTimes+12);
-);
-
-topology==3 ? 
-(
-outr=HouseHolder8x8(x*2,outl,FDNTimes);
-outl=HouseHolder8x8(x*2+1,outl,FDNTimes+12);
-);
-
-topology==4 ? 
-(
-outr=HouseHolder12x12(x*2,outl,FDNTimes);
-outl=HouseHolder12x12(x*2+1,outl,FDNTimes+12);
-);
+outr=HouseHolderX(housesize,x*2,outl,FDNTimes,housesizerecip);
+outl=HouseHolderX(housesize,x*2+4,outl,FDNTimes+12,housesizerecip);
 
 outl=BiLoLeft.BiquadProcess(outl);
 outr=BiLoRight.BiquadProcess(outr);
 outl=BiHiLeft.BiquadProcess(outl);
 outr=BiHiRight.BiquadProcess(outr);
 
-spl0=spl0*(1-mix)+outl/1.5*mix;
-spl1=spl1*(1-mix)+outr/1.5*mix;
+spl0=spl0*(1-mix)+outl/dlevel*mix;
+spl1=spl1*(1-mix)+outr/dlevel*mix;
 
