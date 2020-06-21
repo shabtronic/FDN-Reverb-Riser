@@ -8,7 +8,7 @@ Written purely in Reaper JS
 currently using a small UI/DSP lib: https://github.com/shabtronic/ReaperJSLib
 
 
-![](./Images/FDN-Riser-UI.png)
+![](./Images/FDN-Riser-Pitch-UI.png)
 
 
 Some sound examples here:
