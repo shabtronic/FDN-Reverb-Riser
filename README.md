@@ -1,5 +1,5 @@
 # FDN-Reverb-Riser
-Simple work in progress FDN slow attack reverb
+Simple FDN slow attack reverb with shimmer feedback loop
 
 based on the works from
 
