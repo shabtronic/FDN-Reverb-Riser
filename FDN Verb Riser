@@ -16,8 +16,26 @@ desc:FDN Verb Riser
 // That gives us (8,000,000-1000)/24000 = 333 delay lines to 
 // play around with @ 48khz
 
+// Unfortunatly with the new slider system
+// you still have to mirror define the old sliders!
+slider1:500<40,500>-Time
+slider2:0.6<0,1>-Feedback
+slider3:0.6<0,1>-Density
+slider4:0.7<0,1>-Cascade
+slider5:0.414<0,10>-ModRate
+slider6:0.75<0,1>-Depth
+slider7:0.25<-1,1>-Stereo
+slider8:4<3,32>-Smooth
+slider9:10<10,2000>-Hipass
+slider10:20000<200,20000>-Lopass
+slider11:0.5<0,1>-Mix
+slider12:0<-12,12>-Pitch
+slider13:0<-1,1>-Fine
+
 options:no_meter
 import stronic-lib.js-inc
+
+@serialize
 
 @init
 
@@ -34,17 +52,17 @@ InitDelayLines(64,0.75);
 
 // Create Sliders
 //0
+
 AddSliderTime("Time",500,40,500,"Hint: Controls the maximum delay line time.");
 AddSliderPercent("Feedback",0.7,0,1,"Hint: set the FDN matrix feedback - that's essentially the reverb decay time.");
 AddSliderPercent("Density",0.6,0,1,"Hint: set the Allpass filter feedback. This controls the diffusion amount and attack.");
-AddSliderPercent("Cascade",0.3,0,1,"Hint: Percentage change each delay line time in the FDN and the Allpass serial array.");
+AddSliderPercent("Cascade",0.7,0,1,"Hint: Percentage change each delay line time in the FDN and the Allpass serial array.");
 AddSliderFreq("Mod rate",0.414,0,10,"Hint: Modulation rate - as the rate increases the depth will automatically decrease.");
 //5
 AddSliderPercent("Depth",0.75,0,1,"Hint: Modulation depth.");
 AddSliderPercent("Stereo",0.7,-1,1,"Hint: Controls the stereo field effect. De-correlates left/right using different delay times.");
 AddSliderInt("Smoothness",0.7,0,1,"");
 AddSliderFreq("Hi pass",10,10,2000,"Hint: Hi pass frequency on final output.");
-
 AddSliderFreq("Lo pass",20000,200,20000,"Hint: Lo pass frequency on final output.");
 //10
 AddSliderPercent("Mix",0.5,0,1,"Hint: Controls the Wet/Dry balance.");
@@ -55,8 +73,6 @@ memset(DelayLines,0,8000000-DelayLines);
 rtime=slider1/1000*srate;
 warp=slider4;
 swidth=1-slider9*0.2;
-xrtime=rtime;
-xwarp=warp ;
 stereowidth=swidth;
 BiHiLeft.BiQuadInit();
 BiHiRight.BiQuadInit();
@@ -94,7 +110,7 @@ function CalcDelayLengths(length,warp,swidth)
 (
 c=0;
 l2=length;
-warp2=1-warp;
+warp2=warp;
 while (c<12)
   (
   AllPassTimes[c]=floor(length);
@@ -168,14 +184,14 @@ Text(1,2,"FDN Reverb Riser",8);
 
 gfx_setfont(1,"Arial",cell_len/2);
 colorinc(-0.5);
-Text(25,1.5,"Version 1.0.53",2+8);
+Text(25,1.5,"Version 1.0.54",2+8);
 Text(25,2,"Shabtronic@gmail.com",2+8);
 
 gfx_setfont(1,"Arial",cell_len/1.5);
 popcolour();
 
 
-rectborder(0);          // gap between rounded rectangles
+rectborder(2);          // gap between rounded rectangles
 borderlight(0.00125);   // Rectangle border brightness
 
 rgba(0.15,0.05,0.3,1);  // Main panel colour
@@ -233,15 +249,13 @@ pout=outl;
 
 while (idx<8)
   (
-
   // Chorus style modulation  
   DelayIn(idx*2,outl,modlength);
   outl=DelayOutMod(idx*2,modlength,modrate,moddepth);
   // Hans Shimmer!  it's a bit ropey, sorry :P
-  pitchamount!=0?outl+=(pitchshift(40+idx,outl,pitchamount))*0.25; 
+  pitchamount!=0?outl+=(pitchshift(40+idx,outl,pitchamount))*0.35; 
   // Allpass Riser
   outl=AllPassDelay(idx*2+1,outl,AllPassTimes[x],apdensity);
-
   idx+=1;
   );
 
