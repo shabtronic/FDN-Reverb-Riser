@@ -21,29 +21,35 @@ import stronic-lib.js-inc
 
 @init
 
+function splitstr(srcstr,delim)
+(
+len=strlen(srcstr);
+
+);
 AllPassTimes=GetMem(128);
 FDNTimes=GetMem(128);
 FDNTempFactors=GetMem(128);
-InitDelayLines(128,0.5);  
+InitDelayLines(64,0.75);  
 
 
 // Create Sliders
 //0
-AddSliderTime("Time",500,40,500,"Controls the delay time");
-AddSliderPercent("Feedback",0.7,0,1,"set the FDN matrix feedback - that's essential the reverb decay");
-AddSliderPercent("Density",0.7,-1,1,"");
-AddSliderPercent("Warp",0.7,0,1,"");
-AddSliderFreq("Mod rate",1.414,0,10,"");
+AddSliderTime("Time",500,40,500,"Hint: Controls the maximum delay line time.");
+AddSliderPercent("Feedback",0.7,0,1,"Hint: set the FDN matrix feedback - that's essentially the reverb decay time.");
+AddSliderPercent("Density",0.6,0,1,"Hint: set the Allpass filter feedback. This controls the diffusion amount and attack.");
+AddSliderPercent("Cascade",0.3,0,1,"Hint: Percentage change each delay line time in the FDN and the Allpass serial array.");
+AddSliderFreq("Mod rate",0.414,0,10,"Hint: Modulation rate - as the rate increases the depth will automatically decrease.");
 //5
-AddSliderPercent("Depth",0.75,0,1,"");
-AddSliderPercent("Width",0.25,-1,1,"");
+AddSliderPercent("Depth",0.75,0,1,"Hint: Modulation depth.");
+AddSliderPercent("Stereo",0.7,-1,1,"Hint: Controls the stereo field effect. De-correlates left/right using different delay times.");
 AddSliderInt("Smoothness",0.7,0,1,"");
-AddSliderFreq("Hi pass",10,10,2000,"");
+AddSliderFreq("Hi pass",10,10,2000,"Hint: Hi pass frequency on final output.");
 
-AddSliderFreq("Lo pass",20000,200,20000,"");
+AddSliderFreq("Lo pass",20000,200,20000,"Hint: Lo pass frequency on final output.");
 //10
-AddSliderPercent("Mix",0.5,0,1,"");
-
+AddSliderPercent("Mix",0.5,0,1,"Hint: Controls the Wet/Dry balance.");
+AddSliderInt("Pitch",0,-12,12,"Hint: Pitchshift semitones inside the Allpass array.");
+AddSliderFloat("Fine",0,-1,1,"Hint: Pitchshit cents inside the Allpass array.");
 // Reset Code
 memset(DelayLines,0,8000000-DelayLines);
 rtime=slider1/1000*srate;
@@ -73,6 +79,7 @@ while (cc<hsize)
  );
 factor*=recip;
 cc=0;
+
 while (cc<hsize)
   (
   DelayIn(idx+cc,in+(FDNTempFactors[cc]+factor)*density,TimeArray[cc]);
@@ -94,11 +101,11 @@ while (c<12)
   swidth<0 ?
   (
   FDNTimes[c]=floor(l2);
-  FDNTimes[c+12]=floor(l2*(1--swidth*0.02));
+  FDNTimes[c+12]=floor(l2*(1--swidth*0.005));
   )
   :
   (
-  FDNTimes[c]=floor(l2*(1-swidth*0.02));
+  FDNTimes[c]=floor(l2*(1-swidth*0.005));
   FDNTimes[c+12]=floor(l2);
   );
   AllPassTimes[c]<1? AllPassTimes[c]=1;
@@ -125,7 +132,7 @@ modlength=srate/250+1;
 moddepth=min(1.0/(2.0*rate),1)*gdepth*modlength*0.5;
 swidth=slider7;
 CalcDelayLengths(rtime,warp,swidth);
-housesize=4;//slider8;
+
 HiFreq=slider9;
 LoFreq=slider10;
 
@@ -135,62 +142,83 @@ BiLoLeft.Lowpass(LoFreq,0.25);
 BiLoRight.Lowpass(LoFreq,0.25);
 
 mix=slider11;
-
+pitchamount=pow(2,(slider12+slider13)/12);
+pitchamountrecip=1/pitchamount;
+housesize=4;
 housesizerecip=-2.0/housesize;
+
 @gfx 772 392
-TitleColour(1,1,1,1); // white
-ValueColour(1,0.75,0,1); // orange
-// Background Colour
-rgba(0.15,0.05,0.3,1); // purple
+TitleColour(0.7,0.7,0.7,1); // white
+ValueColour(0.2,0.1,0,1); // orange
+
+rgba(0.25,0.15,0.3,1); //  Background Colour purple
 colorinc(-0.2);
 gfx_rect(0,0,gfx_w,gfx_h);
-//StartGFX(772,392,29,14);    // uncomment this if u want fixed size
-StartGFX(gfx_w,gfx_h,29,14);  // e.t.c.
+
+//StartGFX(772,392,26,14);    // uncomment this if u want fixed size
+StartGFX(gfx_w,gfx_h,26,14);  // e.t.c.
 
 
 
 
-rectcurve=cell_len/2;
+rectcurve=cell_len/3;
 pushcolour(1,1,1,1);
 gfx_setfont(1,"Arial bold",cell_len);
 Text(1,2,"FDN Reverb Riser",8);
 
 gfx_setfont(1,"Arial",cell_len/2);
 colorinc(-0.5);
-Text(28,1.5,"Version 1.0.49",2+8);
-Text(28,2,"Shabtronic@gmail.com",2+8);
+Text(25,1.5,"Version 1.0.53",2+8);
+Text(25,2,"Shabtronic@gmail.com",2+8);
 
 gfx_setfont(1,"Arial",cell_len/1.5);
-Text(1,13,"Hint: ",0);
 popcolour();
-gfx_setfont(1,"Arial",cell_len/1.5);
 
-rgba(0.15,0.05,0.3,1);
+
+rectborder(0);          // gap between rounded rectangles
+borderlight(0.00125);   // Rectangle border brightness
+
+rgba(0.15,0.05,0.3,1);  // Main panel colour
+
 roundrect(1,2,5,13,rectcurve);
-MediumDial(3,5,10); // mix
-MediumDial(3,10,6);  // width
-rectborder(4);
-borderlight(0.25);
+MediumDial(3,5,0);      // time
+MediumDial(3,10,3);     // Cascade
 
 colorinc(-0.025);
-roundrect(5,2,16,13,rectcurve);
-BigDial(8,6,0); // time
-BigDial(13,6,3); //warp
+roundrect(5,2,9,13,rectcurve);
+MediumDial(7,5,11); //Pitch
+MediumDial(7,10,12); //Fine
+
+
+
+colorinc(+0.025);
+roundrect(9,2,13,13,rectcurve);
+MediumDial(11,5,1);   // Feedback
+MediumDial(11,10,2);  // Cascade
 
 colorinc(-0.025);
-roundrect(16,2,20,13,rectcurve);
-MediumDial(18,5,1); // Feedback
-MediumDial(18,10,2);  // Density
+roundrect(13,2,17,13,rectcurve);
+MediumDial(15,5,4);   // rate
+MediumDial(15,10,5);  // depth
+
+colorinc(+0.025);
+roundrect(17,2,21,13,rectcurve);
+MediumDial(19,5,8);   // Hi
+MediumDial(19,10,9);  // Lo
+
 
 colorinc(-0.025);
-roundrect(16+4,2,20+4,13,rectcurve);
-MediumDial(18+4,5,4); // rate
-MediumDial(18+4,10,5);  // depth
+roundrect(21,2,25,13,rectcurve);
+MediumDial(23,5,10);  // mix
+MediumDial(23,10,6);  // stereo
 
-colorinc(-0.025);
-roundrect(16+8,2,20+8,13,rectcurve);
-MediumDial(18+8,5,8); // Hi
-MediumDial(18+8,10,9);  // Lo
+
+gfx_setfont(1,"Arial",cell_len/2);
+rgba(0.75,0.95,0.7,1); // Hover hint colour
+
+hoverhint>-1 && mouseidx<0 ? Text(1,13.18,hoverhint,0);
+mouseidx>-1 ? Text(1,13.18,mouseidx+256,0);
+
 EndGFX();
 
 @sample
@@ -199,23 +227,27 @@ EndGFX();
 outl=spl0;
 outr=spl1;
 
-x=0;
+idx=0;
 md=1;
+pout=outl;
 
-while (x<8)
+while (idx<8)
   (
+
   // Chorus style modulation  
-  DelayIn(x*2,outl,modlength);
-  outl=DelayOutMod(x*2,modlength,modrate/md,moddepth*md);
-  md*=0.9;
+  DelayIn(idx*2,outl,modlength);
+  outl=DelayOutMod(idx*2,modlength,modrate,moddepth);
+  // Hans Shimmer!  it's a bit ropey, sorry :P
+  pitchamount!=0?outl+=(pitchshift(40+idx,outl,pitchamount))*0.25; 
   // Allpass Riser
-  outl=AllPassDelay(x*2+1,outl,AllPassTimes[x],apdensity);
-  x+=1;
+  outl=AllPassDelay(idx*2+1,outl,AllPassTimes[x],apdensity);
+
+  idx+=1;
   );
 
 
-outr=HouseHolderX(housesize,x*2,outl,FDNTimes,housesizerecip);
-outl=HouseHolderX(housesize,x*2+4,outl,FDNTimes+12,housesizerecip);
+outr=HouseHolderX(housesize,idx*2,outl,FDNTimes,housesizerecip);
+outl=HouseHolderX(housesize,idx*2+4,outl,FDNTimes+12,housesizerecip);
 
 outl=BiLoLeft.BiquadProcess(outl);
 outr=BiLoRight.BiquadProcess(outr);
