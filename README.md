@@ -1,8 +1,6 @@
 # FDN-Reverb-Riser
 Simple work in progress FDN slow attack reverb
 
-This is the second pass attempt to get a slow attack reverb working
-
 Written purely in Reaper JS
 
 currently using a small UI/DSP lib: https://github.com/shabtronic/ReaperJSLib
