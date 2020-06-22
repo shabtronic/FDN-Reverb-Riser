@@ -1,6 +1,15 @@
 # FDN-Reverb-Riser
 Simple work in progress FDN slow attack reverb
 
+based on the works from
+
+REDUCING ARTIFICIAL REVERBERATION ALGORITHM REQUIREMENTS
+USING TIME-VARIANT FEEDBACK DELAY NETWORKS
+By
+Jasmin Frenette 
+
+http://pages.infinit.net/jfrenett/thesis.pdf
+
 Written purely in Reaper JS
 
 currently using a small UI/DSP lib: https://github.com/shabtronic/ReaperJSLib
