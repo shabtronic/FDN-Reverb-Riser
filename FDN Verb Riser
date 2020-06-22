@@ -59,15 +59,15 @@ AddSliderPercent("Density",0.6,0,1,"Hint: set the Allpass filter feedback. This 
 AddSliderPercent("Cascade",0.7,0,1,"Hint: Percentage change each delay line time in the FDN and the Allpass serial array.");
 AddSliderFreq("Mod rate",0.414,0,10,"Hint: Modulation rate - as the rate increases the depth will automatically decrease.");
 //5
-AddSliderPercent("Depth",0.75,0,1,"Hint: Modulation depth.");
+AddSliderPercent("Depth",0.5,0,1,"Hint: Modulation depth.");
 AddSliderPercent("Stereo",0.7,-1,1,"Hint: Controls the stereo field effect. De-correlates left/right using different delay times.");
 AddSliderInt("Smoothness",0.7,0,1,"");
 AddSliderFreq("Hi pass",10,10,2000,"Hint: Hi pass frequency on final output.");
-AddSliderFreq("Lo pass",20000,200,20000,"Hint: Lo pass frequency on final output.");
+AddSliderFreq("Lo pass",14000,200,20000,"Hint: Lo pass frequency on final output.");
 //10
 AddSliderPercent("Mix",0.5,0,1,"Hint: Controls the Wet/Dry balance.");
-AddSliderInt("Pitch",0,-12,12,"Hint: Pitchshift semitones inside the Allpass array.");
-AddSliderFloat("Fine",0,-1,1,"Hint: Pitchshit cents inside the Allpass array.");
+AddSliderInt("Pitch",0,-12,12,"Hint: Pitchshift semitones around the Allpass array.");
+AddSliderFloat("Fine",0,-1,1,"Hint: Pitchshit cents around the Allpass array.");
 // Reset Code
 memset(DelayLines,0,8000000-DelayLines);
 rtime=slider1/1000*srate;
@@ -78,7 +78,7 @@ BiHiLeft.BiQuadInit();
 BiHiRight.BiQuadInit();
 BiLoLeft.BiQuadInit();
 BiLoRight.BiQuadInit();
-
+PitchLoPass.BiQuadInit();
 
 // sizes 1,2,3 arnt really valid HouseHolder matrices 
 // Lose a little performance doing it with a loop
@@ -98,7 +98,7 @@ cc=0;
 
 while (cc<hsize)
   (
-  DelayIn(idx+cc,in+(FDNTempFactors[cc]+factor)*density,TimeArray[cc]);
+  DelayIn(idx+cc,in+(FDNTempFactors[cc]+factor)*feedback,TimeArray[cc]);
   cc+=1;
   );
 factor;
@@ -111,6 +111,7 @@ function CalcDelayLengths(length,warp,swidth)
 c=0;
 l2=length;
 warp2=warp;
+warp=warp;
 while (c<12)
   (
   AllPassTimes[c]=floor(length);
@@ -132,13 +133,14 @@ while (c<12)
   c+=1;
   );
 );
+@slider
 
 
 @block
 
 rtime=slider1/1000*srate;
-density=slider2;
-dlevel=pow(max(density,0.75)+0.5,4);
+feedback=slider2;
+dlevel=pow(max(feedback,0.75)+0.5,4);
 apdensity=slider3;
 warp=slider4;
 rate=slider5;
@@ -158,12 +160,15 @@ BiLoLeft.Lowpass(LoFreq,0.25);
 BiLoRight.Lowpass(LoFreq,0.25);
 
 mix=slider11;
+
 pitchamount=pow(2,(slider12+slider13)/12);
 pitchamountrecip=1/pitchamount;
+
+pitchamount<1? PitchFilter.Hipass((80--(slider12+slider13)*4),0.25) :PitchFilter.Lowpass(max(max(20000,(srate/2.1)/pitchamount),200),0.125);
 housesize=4;
 housesizerecip=-2.0/housesize;
 
-@gfx 772 392
+@gfx 772 400
 TitleColour(0.7,0.7,0.7,1); // white
 ValueColour(0.2,0.1,0,1); // orange
 
@@ -172,7 +177,7 @@ colorinc(-0.2);
 gfx_rect(0,0,gfx_w,gfx_h);
 
 //StartGFX(772,392,26,14);    // uncomment this if u want fixed size
-StartGFX(gfx_w,gfx_h,26,14);  // e.t.c.
+StartGFX(gfx_w,gfx_h,26,15);  // e.t.c.
 
 
 
@@ -195,7 +200,7 @@ rectborder(2);          // gap between rounded rectangles
 borderlight(0.00125);   // Rectangle border brightness
 
 rgba(0.15,0.05,0.3,1);  // Main panel colour
-
+roundrect(1,13,25,14,rectcurve/2);
 roundrect(1,2,5,13,rectcurve);
 MediumDial(3,5,0);      // time
 MediumDial(3,10,3);     // Cascade
@@ -232,8 +237,8 @@ MediumDial(23,10,6);  // stereo
 gfx_setfont(1,"Arial",cell_len/2);
 rgba(0.75,0.95,0.7,1); // Hover hint colour
 
-hoverhint>-1 && mouseidx<0 ? Text(1,13.18,hoverhint,0);
-mouseidx>-1 ? Text(1,13.18,mouseidx+256,0);
+hoverhint>-1 && mouseidx<0 ? Text(1.2,13.18,hoverhint,0);
+mouseidx>-1 ? Text(1.2,13.18,mouseidx+256,0);
 
 EndGFX();
 
@@ -245,23 +250,24 @@ outr=spl1;
 
 idx=0;
 md=1;
-pout=outl;
+outl=outl-oldout;
 
 while (idx<8)
   (
-  // Chorus style modulation  
+  // Chorus style modulation - which sucks at the moment
   DelayIn(idx*2,outl,modlength);
   outl=DelayOutMod(idx*2,modlength,modrate,moddepth);
-  // Hans Shimmer!  it's a bit ropey, sorry :P
-  pitchamount!=0?outl+=(pitchshift(40+idx,outl,pitchamount))*0.35; 
   // Allpass Riser
-  outl=AllPassDelay(idx*2+1,outl,AllPassTimes[x],apdensity);
+  outl=AllPassDelay(idx*2+1,outl,AllPassTimes[idx],apdensity);
   idx+=1;
   );
 
+// Hans Shimmer!  slighly less ropey than before!
+oldout=(pitchshift(40,PitchFilter.BiquadProcess(outl),pitchamount))*(max(feedback+0.5,0.9)*0.64);
 
 outr=HouseHolderX(housesize,idx*2,outl,FDNTimes,housesizerecip);
 outl=HouseHolderX(housesize,idx*2+4,outl,FDNTimes+12,housesizerecip);
+
 
 outl=BiLoLeft.BiquadProcess(outl);
 outr=BiLoRight.BiquadProcess(outr);
