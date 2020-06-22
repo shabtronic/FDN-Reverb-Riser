@@ -74,37 +74,23 @@ rtime=slider1/1000*srate;
 warp=slider4;
 swidth=1-slider9*0.2;
 stereowidth=swidth;
-BiHiLeft.BiQuadInit();
-BiHiRight.BiQuadInit();
-BiLoLeft.BiQuadInit();
-BiLoRight.BiQuadInit();
-PitchLoPass.BiQuadInit();
+OutHi.BiQuadInit();
+OutLo.BiQuadInit();
 
-// sizes 1,2,3 arnt really valid HouseHolder matrices 
-// Lose a little performance doing it with a loop
-// in JS - keeps the code smaller
-function HouseHolderX(hsize,idx,in,TimeArray,recip)
+
+function HouseHolder4(hsize,idx,in,TimeArray,recip)
 (
-cc=0;
-factor=0;
-while (cc<hsize)
- (
- FDNTempFactors[cc]=DelayOut(idx+cc);
- factor+=FDNTempFactors[cc];
- cc+=1;
- );
-factor*=recip;
-cc=0;
-
-while (cc<hsize)
-  (
-  DelayIn(idx+cc,in+(FDNTempFactors[cc]+factor)*feedback,TimeArray[cc]);
-  cc+=1;
-  );
+a=DelayOut(idx+0);
+b=DelayOut(idx+1);
+c=DelayOut(idx+2);
+d=DelayOut(idx+3);
+factor=(a+b+c+d)*recip;
+DelayIn(idx+0,in+(a+factor)*feedback,TimeArray[0]);
+DelayIn(idx+1,in+(b+factor)*feedback,TimeArray[1]);
+DelayIn(idx+2,in+(c+factor)*feedback,TimeArray[2]);
+DelayIn(idx+3,in+(d+factor)*feedback,TimeArray[3]);
 factor;
 );
-
-
 
 function CalcDelayLengths(length,warp,swidth)
 (
@@ -154,17 +140,14 @@ CalcDelayLengths(rtime,warp,swidth);
 HiFreq=slider9;
 LoFreq=slider10;
 
-BiHiLeft.Hipass(HiFreq,0.25);
-BiHiRight.Hipass(HiFreq,0.25);
-BiLoLeft.Lowpass(LoFreq,0.25);
-BiLoRight.Lowpass(LoFreq,0.25);
+OutHi.Hipass(HiFreq,0.25);
+OutLo.Lowpass(LoFreq,0.25);
 
 mix=slider11;
 
 pitchamount=pow(2,(slider12+slider13)/12);
 pitchamountrecip=1/pitchamount;
 
-pitchamount<1? PitchFilter.Hipass((80--(slider12+slider13)*4),0.25) :PitchFilter.Lowpass(max(max(20000,(srate/2.1)/pitchamount),200),0.125);
 housesize=4;
 housesizerecip=-2.0/housesize;
 
@@ -189,7 +172,7 @@ Text(1,2,"FDN Reverb Riser",8);
 
 gfx_setfont(1,"Arial",cell_len/2);
 colorinc(-0.5);
-Text(25,1.5,"Version 1.0.55",2+8);
+Text(25,1.5,"Version 1.0.56",2+8);
 Text(25,2,"Shabtronic@gmail.com",2+8);
 
 gfx_setfont(1,"Arial",cell_len/1.5);
@@ -250,7 +233,7 @@ outr=spl1;
 
 feedback>0.9 ? outl=0; // freeze verb!
 
-outl=outl-oldout; // negative feedback - hoping this does something good!
+outl=outl-oldout; // negative feedback - hoping this actually does something good!
   
 // Chorus style modulation - which sucks at the moment
 DelayIn(0,outl,modlength);
@@ -266,18 +249,17 @@ outl=AllPassDelay(6,outl,AllPassTimes[5],apdensity);
 outl=AllPassDelay(7,outl,AllPassTimes[6],apdensity);
 outl=AllPassDelay(8,outl,AllPassTimes[7],apdensity);
 
+// Filters
+outl=OutLo.BiquadProcess(outl);
+outl=OutHi.BiquadProcess(outl);
+
 // Hans Shimmer!  slighly less ropey than before!
-oldout=(pitchshift(17,PitchFilter.BiquadProcess(outl),pitchamount))*(max(feedback+0.5,0.9)*0.64);
+oldout=(pitchshift(17,outl,pitchamount))*(max(feedback+0.5,0.9)*0.64);
 
 // Stereo FDN Reverb block
-outr=HouseHolderX(housesize,8,outl,FDNTimes,housesizerecip);
-outl=HouseHolderX(housesize,12,outl,FDNTimes+12,housesizerecip);
+outr=HouseHolder4(housesize,8,outl,FDNTimes,housesizerecip);
+outl=HouseHolder4(housesize,12,outl,FDNTimes+12,housesizerecip);
 
-// Filters
-outl=BiLoLeft.BiquadProcess(outl);
-outr=BiLoRight.BiquadProcess(outr);
-outl=BiHiLeft.BiquadProcess(outl);
-outr=BiHiRight.BiquadProcess(outr);
 
 spl0=spl0*(1-mix)+outl/dlevel*mix;
 spl1=spl1*(1-mix)+outr/dlevel*mix;
