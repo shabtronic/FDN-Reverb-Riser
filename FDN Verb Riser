@@ -146,7 +146,7 @@ warp=slider4;
 rate=slider5;
 gdepth=slider6;
 modrate=rate/srate*2*$pi;
-modlength=srate/250+1;
+modlength=srate/75+1;
 moddepth=min(1.0/(2.0*rate),1)*gdepth*modlength*0.5;
 swidth=slider7;
 CalcDelayLengths(rtime,warp,swidth);
@@ -189,7 +189,7 @@ Text(1,2,"FDN Reverb Riser",8);
 
 gfx_setfont(1,"Arial",cell_len/2);
 colorinc(-0.5);
-Text(25,1.5,"Version 1.0.54",2+8);
+Text(25,1.5,"Version 1.0.55",2+8);
 Text(25,2,"Shabtronic@gmail.com",2+8);
 
 gfx_setfont(1,"Arial",cell_len/1.5);
@@ -248,27 +248,32 @@ EndGFX();
 outl=spl0;
 outr=spl1;
 
-idx=0;
-md=1;
-outl=outl-oldout;
+feedback>0.9 ? outl=0; // freeze verb!
 
-while (idx<8)
-  (
-  // Chorus style modulation - which sucks at the moment
-  DelayIn(idx*2,outl,modlength);
-  outl=DelayOutMod(idx*2,modlength,modrate,moddepth);
-  // Allpass Riser
-  outl=AllPassDelay(idx*2+1,outl,AllPassTimes[idx],apdensity);
-  idx+=1;
-  );
+outl=outl-oldout; // negative feedback - hoping this does something good!
+  
+// Chorus style modulation - which sucks at the moment
+DelayIn(0,outl,modlength);
+outl=DelayOutMod(0,modlength,modrate,moddepth);
+
+// Allpass Riser array
+outl=AllPassDelay(1,outl,AllPassTimes[0],apdensity);
+outl=AllPassDelay(2,outl,AllPassTimes[1],apdensity);
+outl=AllPassDelay(3,outl,AllPassTimes[2],apdensity);
+outl=AllPassDelay(4,outl,AllPassTimes[3],apdensity);
+outl=AllPassDelay(5,outl,AllPassTimes[4],apdensity);
+outl=AllPassDelay(6,outl,AllPassTimes[5],apdensity);
+outl=AllPassDelay(7,outl,AllPassTimes[6],apdensity);
+outl=AllPassDelay(8,outl,AllPassTimes[7],apdensity);
 
 // Hans Shimmer!  slighly less ropey than before!
-oldout=(pitchshift(40,PitchFilter.BiquadProcess(outl),pitchamount))*(max(feedback+0.5,0.9)*0.64);
+oldout=(pitchshift(17,PitchFilter.BiquadProcess(outl),pitchamount))*(max(feedback+0.5,0.9)*0.64);
 
-outr=HouseHolderX(housesize,idx*2,outl,FDNTimes,housesizerecip);
-outl=HouseHolderX(housesize,idx*2+4,outl,FDNTimes+12,housesizerecip);
+// Stereo FDN Reverb block
+outr=HouseHolderX(housesize,8,outl,FDNTimes,housesizerecip);
+outl=HouseHolderX(housesize,12,outl,FDNTimes+12,housesizerecip);
 
-
+// Filters
 outl=BiLoLeft.BiquadProcess(outl);
 outr=BiLoRight.BiquadProcess(outr);
 outl=BiHiLeft.BiquadProcess(outl);
