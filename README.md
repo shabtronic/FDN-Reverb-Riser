@@ -6,7 +6,7 @@ Written purely in Reaper JS
 currently using a small UI/DSP lib: https://github.com/shabtronic/ReaperJSLib
 
 
-![](./Images/FDN-Riser-v1.0.53.png)
+![](./Images/FDN-Riser-CurrentVersion.png)
 
 
 Some sound examples here:
