@@ -1,7 +1,7 @@
 # FDN-Reverb-Riser
 Simple FDN slow attack reverb with shimmer feedback loop
 
-The current topology is:
+The current algorithm topology is:
 
 **8 Serial Allpass filters in a feedback loop with Modulation,EQ and PitchShifting - into a 4x4 FDN matrix**
 
