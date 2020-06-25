@@ -18,6 +18,8 @@ desc:FDN Verb Riser
 
 // Unfortunatly with the new slider system
 // you still have to mirror define the old sliders!
+// otherwise their values won't serialize
+
 slider1:500<40,500>-Time
 slider2:0.6<0,1>-Feedback
 slider3:0.6<0,1>-Density
@@ -30,7 +32,7 @@ slider9:10<10,2000>-Hipass
 slider10:20000<200,20000>-Lopass
 slider11:0.5<0,1>-Mix
 slider12:0<-12,12>-Pitch
-slider13:0<-1,1>-Fine
+slider13:0<-12,12>-Post Shift
 
 options:no_meter
 import stronic-lib.js-inc
@@ -42,8 +44,8 @@ import stronic-lib.js-inc
 function splitstr(srcstr,delim)
 (
 len=strlen(srcstr);
-
 );
+
 AllPassTimes=GetMem(128);
 FDNTimes=GetMem(128);
 FDNTempFactors=GetMem(128);
@@ -54,7 +56,7 @@ InitDelayLines(64,0.75);
 //0
 
 AddSliderTime("Time",500,40,500,"Hint: Controls the maximum delay line time.");
-AddSliderPercent("Feedback",0.7,0,1,"Hint: set the FDN matrix feedback - that's essentially the reverb decay time.");
+AddSliderPercent("Feedback",0.7,0,1,"Hint: set the FDN matrix feedback - that's essentially the reverb decay time. Freeze at 100%.");
 AddSliderPercent("Density",0.6,0,1,"Hint: set the Allpass filter feedback. This controls the diffusion amount and attack.");
 AddSliderPercent("Cascade",0.7,0,1,"Hint: Percentage change each delay line time in the FDN and the Allpass serial array.");
 AddSliderFreq("Mod rate",0.414,0,10,"Hint: Modulation rate - as the rate increases the depth will automatically decrease.");
@@ -67,7 +69,7 @@ AddSliderFreq("Lo pass",14000,200,20000,"Hint: Lo pass frequency on final output
 //10
 AddSliderPercent("Mix",0.5,0,1,"Hint: Controls the Wet/Dry balance.");
 AddSliderInt("Pitch",0,-12,12,"Hint: Pitchshift semitones around the Allpass array.");
-AddSliderFloat("Fine",0,-1,1,"Hint: Pitchshit cents around the Allpass array.");
+AddSliderInt("Post Shift",0,-12,12,"Hint: Pitchshift semitones the final output.");
 // Reset Code
 memset(DelayLines,0,8000000-DelayLines);
 rtime=slider1/1000*srate;
@@ -119,6 +121,8 @@ while (c<12)
   c+=1;
   );
 );
+
+
 @slider
 
 
@@ -145,8 +149,9 @@ OutLo.Lowpass(LoFreq,0.25);
 
 mix=slider11;
 
-pitchamount=pow(2,(slider12+slider13)/12);
+pitchamount=pow(2,(slider12)/12);
 pitchamountrecip=1/pitchamount;
+pitchamount2=pow(2,(slider13)/12);
 
 housesize=4;
 housesizerecip=-2.0/housesize;
@@ -155,77 +160,101 @@ housesizerecip=-2.0/housesize;
 TitleColour(0.7,0.7,0.7,1); // white
 ValueColour(0.2,0.1,0,1); // orange
 
-rgba(0.25,0.15,0.3,1); //  Background Colour purple
-colorinc(-0.2);
-gfx_rect(0,0,gfx_w,gfx_h);
+
 
 //StartGFX(772,392,26,14);    // uncomment this if u want fixed size
-StartGFX(gfx_w,gfx_h,26,15);  // e.t.c.
+StartGFX(gfx_w,gfx_h,26,15);  // and comment this out e.t.c.
 
+pushcolour(0,0,0,1); // Outline Colour
+pushcolour(0.125,0,0.25,1); //  Background Colour purple
 
+roundrectoutline(0,0,26,15,10,.25);
 
+FontName="arial";
+FontNameBold=#;
+strcpy(FontNameBold,FontName);
+strcat(FontNameBold," Bold");
 
 rectcurve=cell_len/3;
-pushcolour(1,1,1,1);
-gfx_setfont(1,"Arial bold",cell_len);
-Text(1,2,"FDN Reverb Riser",8);
+pushcolour(0.5,0.5,1,1);
+gfx_setfont(1,FontNameBold,cell_len);
+TextOutline(1,2,"FDN Reverb Riser",8,0.13);
 
-gfx_setfont(1,"Arial",cell_len/2);
-colorinc(-0.5);
-Text(25,1.5,"Version 1.0.57",2+8);
-Text(25,2,"Shabtronic@gmail.com",2+8);
+gfx_setfont(1,FontName,cell_len/2);
 
-gfx_setfont(1,"Arial",cell_len/1.5);
+TextOutline(25,1.5,"Version 1.0.60",2+8,0.05);
+TextOutline(25,2,"Shabtronic@gmail.com",2+8,0.05);
+
+gfx_setfont(1,FontName,cell_len/1.5);
 popcolour();
 
-rectborder(2);          // gap between rounded rectangles
-borderlight(0.00125);   // Rectangle border brightness
+//rectborder(2);          // gap between rounded rectangles
+borderlight(0.0015);   // Rectangle border brightness
 
-rgba(0.15,0.05,0.3,1);  // Main panel colour
-roundrect(1,13,25,14,rectcurve/2);
-roundrect(1,2,5,13,rectcurve);
+pushcolour(0.0,0.0,0.0,1); // Outline Colour
+pushcolour(0.15,0.0,0.3,1);  // Main panel colour
+rectborder=0.125;
+// Hint Rectangle
+roundrectoutline(1,13,25,14,rectcurve/2,rectborder);
+
+roundrectoutline(1,2,5,13,rectcurve,rectborder);
 MediumDial(3,5,0);      // time
 MediumDial(3,10,3);     // Cascade
 
 colorinc(-0.025);
-roundrect(5,2,9,13,rectcurve);
+roundrectoutline(5,2,9,13,rectcurve,rectborder);
 MediumDial(7,5,11); //Pitch
-MediumDial(7,10,12); //Fine
-
-
+MediumDial(7,10,12); //Post Pitch
 
 colorinc(+0.025);
-roundrect(9,2,13,13,rectcurve);
+roundrectoutline(9,2,13,13,rectcurve,rectborder);
 MediumDial(11,5,1);   // Feedback
 MediumDial(11,10,2);  // Cascade
 
 colorinc(-0.025);
-roundrect(13,2,17,13,rectcurve);
+roundrectoutline(13,2,17,13,rectcurve,rectborder);
 MediumDial(15,5,4);   // rate
 MediumDial(15,10,5);  // depth
 
 colorinc(+0.025);
-roundrect(17,2,21,13,rectcurve);
+roundrectoutline(17,2,21,13,rectcurve,rectborder);
 MediumDial(19,5,8);   // Hi
 MediumDial(19,10,9);  // Lo
 
 
 colorinc(-0.025);
-roundrect(21,2,25,13,rectcurve);
+roundrectoutline(21,2,25,13,rectcurve,rectborder);
 MediumDial(23,5,10);  // mix
 MediumDial(23,10,6);  // stereo
 
 
-gfx_setfont(1,"Arial",cell_len/2);
+gfx_setfont(1,FontName,cell_len/2);
 rgba(0.75,0.95,0.7,1); // Hover hint colour
 
-hoverhint>-1 && mouseidx<0 ? Text(1.2,13.18,hoverhint,0);
-mouseidx>-1 ? Text(1.2,13.18,mouseidx+256,0);
-gfx_setfont(1,"Arial Bold",cell_len);
-rgba(0.3,0.3,0.7,1); // Hover hint colour
-feedback==1 ? Text(15,2,"Frozen!",1+8);
+hoverhint>-1 && mouseidx<0 ? Text(1.5,13.18,hoverhint,0);
+mouseidx>-1 ? Text(1.5,13.18,mouseidx+256,0);
+
+// Cheesy fun for the coder!
+feedback==1 ? 
+  (
+  flash+=1; 
+  flash&8==8? 
+    (
+    gfx_setfont(1,FontNameBold,cell_len*4);
+    rgba(0.15,0.15,0.7,1);  //Frozen colour
+    TextOutline(13,7,"Frozen!",1+4,.25);
+    );
+  );
+
+
+
 
 EndGFX();
+
+// blur for a Murky UI!
+gfx_x=0;
+gfx_y=0;
+gfx_blurto(gfx_w,gfx_h);
 
 @sample
 
@@ -233,11 +262,9 @@ EndGFX();
 outl=spl0;
 outr=spl1;
 
-feedback>0.9 ? outl=0; // freeze verb!
-
+feedback==1? outl=0; // freeze verb!
 
 outl=outl+(oldout*feedback*0.9);
-
 
 // Chorus style modulation - which sucks at the moment
 DelayIn(0,outl,modlength);
@@ -258,13 +285,22 @@ outl=OutLo.BiquadProcess(outl);
 outl=OutHi.BiquadProcess(outl);
 
 // Hans Shimmer!  slighly less ropey than before!
-oldout=((pitchshift(20,(outl),pitchamount)));
+oldout=((PitchShiftSynced(20,(outl),pitchamount)));
+
+// Freeze level
+feedback==1? outl/=2;
 
 // Stereo FDN Reverb block
 outr=HouseHolder4(9,outl,FDNTimes);
 outl=HouseHolder4(13,outl,FDNTimes+12);
 
-
+// Twilight princess shifting!
+pitchamount2!=1?
+  (
+  outr=((PitchShiftFreeRunning(21,(outr),pitchamount2)));
+  outl=((PitchShiftFreeRunning(22,(outl),pitchamount2)));
+  );
+  
 spl0=spl0*(1-mix)+outl/dlevel*mix;
 spl1=spl1*(1-mix)+outr/dlevel*mix;
 
