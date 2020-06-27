@@ -60,7 +60,13 @@ https://soundcloud.com/shabtronica/sets/fdn-slow-attack-comparision
 
 ## Installation
 
-Simply copy the three files into your c:\reaper\effects\ directory.
+Simply copy the three files:
+
+FDN Verb Riser
+FDN Verb Riser.rpl
+stronic-lib.js-inc
+
+into your \reaper\effects\ directory.
 
 
 ## Development thread:
