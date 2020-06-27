@@ -58,7 +58,9 @@ https://soundcloud.com/shabtronica/sets/fdn-slow-attack-comparision
 
   Small reverse rise, that works well with drums and gives a gated reverb effect.
 
+## Installation
 
+Simply copy the three files into your c:\reaper\effects\ directory.
 
 
 ## Development thread:
