@@ -26,11 +26,9 @@ Some sound examples here:
 
 https://soundcloud.com/shabtronica/sets/fdn-slow-attack-comparision
 
-Development thread:
 
-https://www.kvraudio.com/forum/viewtopic.php?f=33&t=547140
 
-**Presets**
+##Presets
 
 **Default**
 
@@ -43,3 +41,9 @@ Works best with sounds that have low to medium harmonic content (nylon guitar, f
 
 Small reverse rise, that works well with drums and gives a gated reverb effect.
 
+
+
+
+##Development thread:
+
+https://www.kvraudio.com/forum/viewtopic.php?f=33&t=547140
