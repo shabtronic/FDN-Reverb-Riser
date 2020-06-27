@@ -28,7 +28,7 @@ https://soundcloud.com/shabtronica/sets/fdn-slow-attack-comparision
 
 
 
-##Presets
+## Presets
 
 **Default**
 
@@ -44,6 +44,6 @@ Small reverse rise, that works well with drums and gives a gated reverb effect.
 
 
 
-##Development thread:
+## Development thread:
 
 https://www.kvraudio.com/forum/viewtopic.php?f=33&t=547140
