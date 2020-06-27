@@ -35,6 +35,10 @@ https://soundcloud.com/shabtronica/sets/fdn-slow-attack-comparision
 
 **Default**
 
+**Event Horizon**
+
+The classic "Big Space" FDN sound - endless (almost).
+
 **Orchestra Swell**
 
 My favourite preset - play with the feedback to control the harmonics and intensity of the swell.
