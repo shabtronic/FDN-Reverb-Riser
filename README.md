@@ -35,6 +35,16 @@ https://soundcloud.com/shabtronica/sets/fdn-slow-attack-comparision
 
 **Default**
 
+Medium hall type reverb.
+
+**Chorus Detune**
+
+Poor mans chorus - sounds like a out of tune piano!
+
+**Stereo Swell**
+
+Medium decay reverb - that pans across the stereo field.
+
 **Event Horizon**
 
 The classic "Big Space" FDN sound - endless floaty space (almost).
@@ -54,3 +64,7 @@ Small reverse rise, that works well with drums and gives a gated reverb effect.
 ## Development thread:
 
 https://www.kvraudio.com/forum/viewtopic.php?f=33&t=547140
+
+## To do ##
+
+Add some time change code - resample time, resample pitch or XFade sled - to smooth out any time changes.
