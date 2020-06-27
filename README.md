@@ -35,28 +35,28 @@ https://soundcloud.com/shabtronica/sets/fdn-slow-attack-comparision
 
 **Default**
 
-Medium hall type reverb.
+  Medium hall type reverb.
 
 **Chorus Detune**
 
-Poor mans chorus - sounds like a out of tune piano!
+  Poor mans chorus - sounds like a out of tune piano!
 
 **Stereo Swell**
 
-Medium decay reverb - that pans across the stereo field.
+  Medium decay reverb - that pans across the stereo field.
 
 **Event Horizon**
 
-The classic "Big Space" FDN sound - endless floaty space (almost).
+  The classic "Big Space" FDN sound - endless floaty space (almost).
 
 **Orchestra Swell**
 
-My favourite preset - play with the feedback to control the harmonics and intensity of the swell.
-Works best with sounds that have low to medium harmonic content (nylon guitar, flute e.t.c.)
+  My favourite preset - play with the feedback to control the harmonics and intensity of the swell.
+  Works best with sounds that have low to medium harmonic content (nylon guitar, flute e.t.c.)
 
 **Drum Rev**
 
-Small reverse rise, that works well with drums and gives a gated reverb effect.
+  Small reverse rise, that works well with drums and gives a gated reverb effect.
 
 
 
