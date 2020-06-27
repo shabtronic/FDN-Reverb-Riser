@@ -37,7 +37,7 @@ https://soundcloud.com/shabtronica/sets/fdn-slow-attack-comparision
 
 **Event Horizon**
 
-The classic "Big Space" FDN sound - endless (almost).
+The classic "Big Space" FDN sound - endless floaty space (almost).
 
 **Orchestra Swell**
 
