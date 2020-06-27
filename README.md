@@ -37,4 +37,9 @@ https://www.kvraudio.com/forum/viewtopic.php?f=33&t=547140
 **Orchestra Swell**
 
 My favourite preset - play with the feedback to control the harmonics and intensity of the swell.
+Works best with sounds that have low to medium harmonic content (nylon guitar, flute e.t.c.)
+
+**Drum Rev**
+
+Small reverse rise, that works well with drums and gives a gated reverb effect.
 
