@@ -29,3 +29,12 @@ https://soundcloud.com/shabtronica/sets/fdn-slow-attack-comparision
 Development thread:
 
 https://www.kvraudio.com/forum/viewtopic.php?f=33&t=547140
+
+**Presets**
+
+**Default**
+
+**Orchestra Swell**
+
+My favourite preset - play with the feedback to control the harmonics and intensity of the swell.
+
