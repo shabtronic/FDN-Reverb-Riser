@@ -39,11 +39,16 @@ function getmem(elements,size)
 (
 getmem(elements*size);
 );
-
+function ClearDelays()
+(
+DelayLines!=0? memset(DelayLines,0,DelayMemSize);
+);
 function InitDelayLines(count,maxsecs)
 (
+
 MaxDelaySize=srate*maxsecs;
 MaxDelays=count;
+DelayMemSize=MaxDelays*MaxDelaySize;
 DelayParams=getmem(MaxDelays,4); // 0=pointer,1=modphase,2=oldsize,3=DelayArray
 DelayLines=getmem(MaxDelays,MaxDelaySize);
 );
