@@ -25,12 +25,6 @@ currently using a small UI/DSP lib: https://github.com/shabtronic/ReaperJSLib
 ![](./Images/FDN-Riser-CurrentVersion.png)
 
 
-Some sound examples here:
-
-https://soundcloud.com/shabtronica/sets/fdn-slow-attack-comparision
-
-
-
 ## Presets
 
 **Default**
