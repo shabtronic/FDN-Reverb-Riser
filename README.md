@@ -63,6 +63,8 @@ currently using a small UI/DSP lib: https://github.com/shabtronic/ReaperJSLib
   Small reverse rise, that works well with drums and gives a gated reverb effect.
 
  ![Example flac file](./Examples/Preset-DrumRev.flac)
+ 
+ https://soundcloud.com/shabtronica/sets/fdn-reverb-presets
 
 ## Installation
 
