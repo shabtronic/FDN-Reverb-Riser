@@ -54,7 +54,7 @@ https://soundcloud.com/shabtronica/sets/fdn-slow-attack-comparision
   My favourite preset - play with the feedback to control the harmonics and intensity of the swell.
   Works best with sounds that have low to medium harmonic content (nylon guitar, flute e.t.c.)
   
-  ![](./Examples/Preset - Orchestra Swell.flac)
+  ![Example](./Examples/Preset - Orchestra Swell.flac)
 
 **Drum Rev**
 
