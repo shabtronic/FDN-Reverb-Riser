@@ -38,6 +38,8 @@ options:no_meter
 import stronic-lib.js-inc
 
 @serialize
+// can't figure out how to use this to clear the
+// delay lines on a preset load.
 
 @init
 
@@ -49,6 +51,7 @@ FDNTempFactors=GetMem(128);
 InitDelayLines(64,0.75);
 pitchsize=8192;
 SinWindow(SinWindow,pitchsize);
+InitCalled=1;
 
 // Create Sliders
 //0
@@ -127,6 +130,11 @@ while (c<12)
 @block
 
 rtime=slider1/1000*srate;
+// SDS - Clear the delays on a time change
+// need to fix this later so it's smoother
+// with a resample/xfade sled
+rtime!=lrtime?  ClearDelays();
+lrtime=rtime;
 feedback=slider2;
 dlevel=pow(max(feedback,0.75)+0.5,4);
 density=slider3;
