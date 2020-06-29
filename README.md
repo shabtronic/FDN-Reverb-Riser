@@ -61,9 +61,9 @@ All preset examples are here:
 
 Simply copy the three files:
 
-FDN Verb Riser
-FDN Verb Riser.rpl
-stronic-lib.js-inc
+"FDN Verb Riser"
+"FDN Verb Riser.rpl"
+"stronic-lib.js-inc"
 
 into your \reaper\effects\ directory.
 
