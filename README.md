@@ -67,7 +67,7 @@ stronic-lib.js-inc
 
 into your \reaper\effects\ directory.
 
-The reverb will then appear in the JS fx list as "FDN reverb riser" once it's been refresh (either restartubg reaper or scan for new plugins).
+The reverb will then appear in the JS fx list as "FDN reverb riser" once it's been refreshed (either restartubg reaper or scan for new plugins).
 
 you may have to import the .rpl into the fx to get the presets.
 
