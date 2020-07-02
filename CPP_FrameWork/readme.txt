@@ -1,0 +1,1 @@
+framework to port stronic-lib.js-inc to cpp quickly
