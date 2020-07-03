@@ -17,7 +17,7 @@ Jasmin Frenette
 
 http://pages.infinit.net/jfrenett/thesis.pdf
 
-**Reaoer JS Version** 
+**Reaper JS Version** 
 
 currently using a small UI/DSP lib: https://github.com/shabtronic/ReaperJSLib
  
