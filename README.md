@@ -25,6 +25,8 @@ currently using a small UI/DSP lib: https://github.com/shabtronic/ReaperJSLib
  
 uses the marvelous IPlug2 library https://github.com/iPlug2/iPlug2
 
+Currently only the UI code is in place - no DSP at the moment.
+
 
 ![](./Images/FDN-Riser-CurrentVersion.png)
 
