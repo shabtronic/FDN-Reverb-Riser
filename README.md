@@ -17,10 +17,14 @@ Jasmin Frenette
 
 http://pages.infinit.net/jfrenett/thesis.pdf
 
-Written purely in Reaper JS
+##Reaoer JS Version 
 
 currently using a small UI/DSP lib: https://github.com/shabtronic/ReaperJSLib
  
+##VST2/VST3
+ 
+uses the marvolous IPlug2 library https://github.com/iPlug2/iPlug2
+
 
 ![](./Images/FDN-Riser-CurrentVersion.png)
 
