@@ -63,6 +63,16 @@ All preset examples are here:
 
 ## Installation
 
+**VST2 Version**
+
+copy FDNRiser_x64.dll into your normal vst plugins directory, wherever you have previously installed vst2 plugins.
+
+**VST3 Version**
+
+copy FDNRiser.vst3 into your \Program files\Common Files\VST3 directory.
+
+**Reaper JS Version**
+
 Simply copy the three files:
 
 "FDN Verb Riser"
