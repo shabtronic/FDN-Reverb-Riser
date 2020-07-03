@@ -69,7 +69,7 @@ copy FDNRiser_x64.dll into your normal vst plugins directory, wherever you have 
 
 **VST3 Version**
 
-copy FDNRiser.vst3 into your \Program files\Common Files\VST3 directory.
+copy FDNRiser.vst3 into your \Program files\Common Files\VST3 directory (must be this directory apparently).
 
 **Reaper JS Version**
 
