@@ -96,3 +96,4 @@ https://www.kvraudio.com/forum/viewtopic.php?f=33&t=547140
 ## To do ##
 
 Add some time change code - resample time, resample pitch or XFade sled - to smooth out any time changes.
+FPU checks in the VST versions.
